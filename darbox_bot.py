@@ -236,7 +236,8 @@ def inline_kb(buttons, row_width=2):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 # ===================== БОТ =====================
-bot = Bot(token=BOT_TOKEN, default={"parse_mode": "HTML"})
+from aiogram.client.default import DefaultBotProperties
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
