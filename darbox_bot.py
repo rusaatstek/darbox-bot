@@ -2,18 +2,19 @@
 🎁 DARBOX v4 — Premium Telegram Aroma Subscription Bot
 DAR Perfum | @dararomabox_bot
 Features: Personal cabinet, perfume diary, rating system,
-taste analytics, referrals, admin panel, chat system
+taste analytics, referrals, admin panel, chat system, Mini App
 """
-import asyncio, sqlite3, json, hashlib, random, string
+import asyncio, sqlite3, json, hashlib, random, string, os
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, F, Router
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonWebApp
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiohttp import web
 
 # ═══════════════════════════════════════
 #              CONFIGURATION
@@ -42,6 +43,13 @@ div = "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈"
 def pbar(c,t,l=14): f=round(l*c/t);return f"{'█'*f}{'░'*(l-f)}  {c}/{t}"
 def hdr(n,title,em=""): return f"{em} <b>{title}</b>\n\n{pbar(n,TOTAL_Q)}"
 def gen_ref(uid): return hashlib.md5(f"dar{uid}".encode()).hexdigest()[:8]
+
+# Web App URL — will be set dynamically from RAILWAY_PUBLIC_DOMAIN or PORT
+WEBAPP_HOST = "0.0.0.0"
+WEBAPP_PORT = int(os.environ.get("PORT", 8080))
+WEBAPP_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+if WEBAPP_URL and not WEBAPP_URL.startswith("http"):
+    WEBAPP_URL = f"https://{WEBAPP_URL}"
 
 NM = {
     "citrus":"🍋 Цитрусовые","floral":"🌹 Цветочные","woody":"🌳 Древесные",
@@ -132,7 +140,6 @@ def getfb(uid):
     rs = c.fetchall(); cn.close(); return [dict(r) for r in rs]
 
 def get_taste_stats(uid):
-    """Analyze user's ratings to build taste profile"""
     fbs = getfb(uid)
     if not fbs: return None
     total = len(fbs); avg_overall = sum(f["rating_overall"] for f in fbs) / total
@@ -220,7 +227,14 @@ def main_menu_kb():
     ], 1)
 
 def menu_kb():
-    return K([
+    btns = []
+    # Mini App button at the top if URL is available
+    if WEBAPP_URL:
+        btns_rows = [[InlineKeyboardButton(text="✨ Открыть DARBOX App", web_app=WebAppInfo(url=WEBAPP_URL))]]
+    else:
+        btns_rows = []
+    # Regular menu buttons
+    menu_btns = [
         ("🌸 Оформить подписку", "sq"),
         ("👤 Мой профиль", "profile"),
         ("📖 Парфюмерный дневник", "diary_menu"),
@@ -230,11 +244,50 @@ def menu_kb():
         ("📋 Моя подписка", "mysub"),
         ("🎁 Пригласить друга", "referral"),
         ("✉️ Написать нам", "cmsg"),
-    ], 2)
+    ]
+    row = []
+    for t, cb in menu_btns:
+        row.append(InlineKeyboardButton(text=t, callback_data=cb))
+        if len(row) >= 2: btns_rows.append(row); row = []
+    if row: btns_rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=btns_rows)
 
 achat_with = {}
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage()); router = Router(); dp.include_router(router)
+
+# ═══════════════════════════════════════
+#           WEB SERVER (Mini App)
+# ═══════════════════════════════════════
+async def handle_index(request):
+    """Serve the Mini App HTML"""
+    try:
+        with open("templates/index.html", "r", encoding="utf-8") as f:
+            return web.Response(text=f.read(), content_type="text/html")
+    except FileNotFoundError:
+        return web.Response(text="<h1>DARBOX Mini App</h1><p>index.html not found</p>", content_type="text/html")
+
+async def handle_health(request):
+    """Health check endpoint"""
+    return web.Response(text="OK")
+
+async def start_web_server():
+    """Start aiohttp web server for Mini App"""
+    app = web.Application()
+    app.router.add_get("/", handle_index)
+    app.router.add_get("/health", handle_health)
+    # Serve static files from templates folder
+    app.router.add_static("/static/", path="templates/", name="static")
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, WEBAPP_HOST, WEBAPP_PORT)
+    await site.start()
+    print(f"🌐 Web server started on {WEBAPP_HOST}:{WEBAPP_PORT}")
+    if WEBAPP_URL:
+        print(f"🔗 Mini App URL: {WEBAPP_URL}")
+    else:
+        print(f"⚠️  RAILWAY_PUBLIC_DOMAIN not set — Mini App button will be hidden")
+        print(f"   Set it in Railway: Settings → Networking → Generate Domain")
 
 # ═══════════════════════════════════════
 #           /start & MAIN MENU
@@ -242,7 +295,6 @@ dp = Dispatcher(storage=MemoryStorage()); router = Router(); dp.include_router(r
 @router.message(Command("start"))
 async def cmd_start(msg: Message, state: FSMContext):
     await state.clear()
-    # Check referral
     ref = msg.text.split()[1] if len(msg.text.split()) > 1 else None
     rc = gen_ref(msg.from_user.id)
     data = {"username": msg.from_user.username or "", "first_name": msg.from_user.first_name or "",
@@ -250,6 +302,20 @@ async def cmd_start(msg: Message, state: FSMContext):
     if ref and ref != rc:
         data["referred_by"] = ref
     savu(msg.from_user.id, data)
+
+    # Set Mini App as menu button if URL is available
+    if WEBAPP_URL:
+        try:
+            await bot.set_chat_menu_button(
+                chat_id=msg.chat.id,
+                menu_button=MenuButtonWebApp(text="DARBOX", web_app=WebAppInfo(url=WEBAPP_URL))
+            )
+        except Exception as e:
+            print(f"Menu button error: {e}")
+
+    webapp_line = ""
+    if WEBAPP_URL:
+        webapp_line = "\n💎 <b>Нажмите кнопку ниже для премиум-интерфейса!</b>\n"
 
     welcome = f"""
 {DIV}
@@ -267,7 +333,7 @@ async def cmd_start(msg: Message, state: FSMContext):
 ┊ ✨  5 × 10 мл —  <b>3 580 ₽</b>/мес
 
 🔥 <i>4 мес → −5%  ·  6 мес → −10%</i>
-
+{webapp_line}
 {div}
 
 Выберите раздел:"""
@@ -340,7 +406,6 @@ async def taste_map(cb: CallbackQuery):
         await cb.message.answer("📊 <b>Карта вкуса</b>\n\nПока нет данных. Оставьте отзывы после получения бокса!\n\n/feedback — оставить отзыв",
                                 reply_markup=K([("🏠 Меню", "menu")])); return
 
-    # Build visual taste map
     def bar(val, mx=5, l=10):
         f = round(l * val / mx); return "▓" * f + "░" * (l - f)
 
@@ -464,7 +529,6 @@ async def diary_mood(cb: CallbackQuery, state: FSMContext):
         reply_markup=K([("📖 Ещё запись", "diary_new"), ("🏠 Меню", "menu")]))
     await state.clear()
 
-    # Notify admin
     global ADMIN_CHAT_ID
     if ADMIN_CHAT_ID:
         try: await bot.send_message(ADMIN_CHAT_ID,
@@ -1154,7 +1218,13 @@ async def c2a(msg: Message, state: FSMContext):
 #           LAUNCH
 # ═══════════════════════════════════════
 async def main():
-    init_db(); print("🚀 DARBOX v4 Premium!")
+    init_db()
+    print("🎩 DARBOX v4 Premium!")
+
+    # Start web server for Mini App
+    await start_web_server()
+
+    # Start bot polling
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
