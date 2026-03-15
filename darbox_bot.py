@@ -888,6 +888,77 @@ body {
 .q-next.ready { background: var(--accent); color: #fff; }
 .q-next:active { transform: scale(0.97); }
 
+/* Multi-select chip grid for notes */
+.q-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.q-chip {
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.q-chip:active { transform: scale(0.95); }
+.q-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.q-chip .chip-emoji { margin-right: 4px; }
+
+.q-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin: 16px 0 8px;
+  padding-left: 2px;
+  font-weight: 600;
+}
+.q-section-label:first-child { margin-top: 0; }
+
+.q-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: -8px 0 12px;
+  font-style: italic;
+}
+
+/* Text input in questionnaire */
+.q-text-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-top: 4px;
+  resize: none;
+  min-height: 80px;
+}
+.q-text-input:focus { border-color: var(--accent); }
+.q-text-input::placeholder { color: var(--text-muted); }
+
+.q-counter {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.q-counter b { color: var(--accent); }
+
 /* === CHAT === */
 .chat-messages {
   display: flex;
@@ -1642,18 +1713,151 @@ function initRadar() {
   container.innerHTML = svg;
 }
 
-// === QUESTIONNAIRE ===
+// === QUESTIONNAIRE (20 вопросов — полный ольфакторный портрет) ===
 const questions = [
-  { q: 'Для кого подбираем ароматы?', opts: ['Для себя (Ж)', 'Для себя (М)', 'В подарок (Ж)', 'В подарок (М)'] },
-  { q: 'Ваш возраст?', opts: ['18–24', '25–34', '35–44', '45+'] },
-  { q: 'Ваш образ жизни?', opts: ['Активный / спорт', 'Деловой / офис', 'Творческий', 'Домашний / уютный'] },
-  { q: 'Повод для ароматов?', opts: ['На каждый день', 'Для работы', 'На свидание', 'Для особых случаев'] },
-  { q: 'Какая интенсивность вам ближе?', opts: ['Лёгкая, еле уловимая', 'Средняя, для себя', 'Выраженная, с шлейфом', 'Мощная, на весь офис'] },
-  { q: 'Ваш парфюмерный опыт?', opts: ['Новичок', 'Есть любимые ароматы', 'Продвинутый', 'Эксперт / коллекционер'] },
-  { q: 'Какие ноты вам нравятся?', opts: ['Цветочные', 'Фруктовые', 'Древесные', 'Восточные / пряные'], multi: true },
-  { q: 'А какие не переносите?', opts: ['Сладкие / приторные', 'Табачные / кожаные', 'Острые / пряные', 'Нет таких'], multi: true },
-  { q: 'Предпочтительный сезон?', opts: ['Весна / Лето', 'Осень / Зима', 'Круглый год', 'Хочу под каждый сезон'] },
-  { q: 'Готовы к экспериментам?', opts: ['Да, удивляйте!', 'Умеренно', 'Нет, классику', 'Только проверенное'] },
+  // 1. Пол
+  { q: 'Для кого подбираем ароматы?', type: 'single', opts: [
+    '👩 Для себя (женщина)', '👨 Для себя (мужчина)',
+    '🎁 В подарок женщине', '🎁 В подарок мужчине'
+  ]},
+  // 2. Возраст
+  { q: 'Ваш возраст?', type: 'single', opts: [
+    '18–24', '25–30', '31–40', '41–50', '50+'
+  ]},
+  // 3. Образ жизни
+  { q: 'Какой у вас образ жизни?', type: 'single', opts: [
+    '🏃 Активный / спорт', '💼 Деловой / офис',
+    '🎨 Творческий / свободный', '🏡 Домашний / уютный',
+    '🌍 Путешествия / движение', '🎓 Студент'
+  ]},
+  // 4. Повод
+  { q: 'Для какого повода нужны ароматы?', type: 'multi', hint: 'Можно выбрать несколько', opts: [
+    '☀️ На каждый день', '💼 Для работы / офис',
+    '💑 На свидание', '🌙 Вечерний выход',
+    '🎉 Праздник / событие', '🧘 Для релакса дома',
+    '🏋️ Спорт / активность', '✈️ Путешествие'
+  ]},
+  // 5. Интенсивность
+  { q: 'Какая интенсивность аромата вам ближе?', type: 'single', opts: [
+    '🌬️ Лёгкая — еле уловимая аура', '🌸 Средняя — слышно на расстоянии руки',
+    '💫 Выраженная — заметный шлейф', '🔥 Мощная — аромат входит в комнату раньше вас'
+  ]},
+  // 6. Парфюмерный опыт
+  { q: 'Ваш парфюмерный опыт?', type: 'single', opts: [
+    '🌱 Новичок — только начинаю разбираться',
+    '🌿 Есть несколько любимых ароматов',
+    '🌳 Продвинутый — знаю ноты и бренды',
+    '👑 Эксперт — большая коллекция, слежу за релизами'
+  ]},
+  // 7. ЛЮБИМЫЕ НОТЫ — расширенный мульти-выбор с категориями
+  { q: 'Какие ноты и направления вам нравятся?', type: 'chips', hint: 'Выберите все, что откликается — чем больше, тем точнее подбор',
+    sections: [
+      { label: '🌸 Цветочные', chips: ['Роза', 'Жасмин', 'Пион', 'Тубероза', 'Ирис', 'Ландыш', 'Магнолия', 'Фиалка', 'Нероли', 'Лаванда', 'Флёрдоранж', 'Иланг-иланг'] },
+      { label: '🍑 Фруктовые и ягодные', chips: ['Персик', 'Груша', 'Яблоко', 'Малина', 'Вишня', 'Слива', 'Чёрная смородина', 'Инжир', 'Ананас', 'Манго', 'Цитрусы (общие)', 'Бергамот', 'Грейпфрут', 'Лимон'] },
+      { label: '🌲 Древесные', chips: ['Сандал', 'Кедр', 'Ветивер', 'Пачули', 'Уд (агаровое дерево)', 'Берёза', 'Сосна', 'Кипарис', 'Гваяк', 'Бамбук'] },
+      { label: '🍯 Сладкие и гурманские', chips: ['Ваниль', 'Карамель', 'Шоколад', 'Мёд', 'Миндаль', 'Кокос', 'Тоффи', 'Пралине', 'Кофе', 'Какао'] },
+      { label: '🔥 Пряные и восточные', chips: ['Корица', 'Кардамон', 'Имбирь', 'Шафран', 'Перец (чёрный/розовый)', 'Гвоздика', 'Ладан', 'Мирра', 'Амбра', 'Бензоин'] },
+      { label: '🌿 Свежие и зелёные', chips: ['Мята', 'Зелёный чай', 'Огурец', 'Базилик', 'Лотос', 'Морские ноты', 'Озон', 'Свежескошенная трава', 'Яблочный цвет'] },
+      { label: '🧴 Мускусные и пудровые', chips: ['Белый мускус', 'Пудра', 'Амбретта', 'Кашемировое дерево', 'Замша', 'Чистый хлопок'] },
+      { label: '🖤 Тёмные и дымные', chips: ['Кожа', 'Табак', 'Дым / берёзовый дёготь', 'Ром', 'Виски', 'Опиум', 'Смола'] },
+    ]
+  },
+  // 8. НЕЛЮБИМЫЕ НОТЫ
+  { q: 'А какие ноты вы точно не любите?', type: 'chips', hint: 'Мы исключим их из подбора',
+    sections: [
+      { label: 'Отметьте то, что отталкивает', chips: [
+        'Роза', 'Жасмин', 'Тубероза', 'Ландыш', 'Лаванда',
+        'Ваниль', 'Карамель', 'Шоколад', 'Мёд',
+        'Пачули', 'Уд', 'Ветивер', 'Кедр',
+        'Корица', 'Ладан', 'Мирра', 'Амбра',
+        'Кожа', 'Табак', 'Дым',
+        'Мускус', 'Пудра',
+        'Морские ноты', 'Озон', 'Мята',
+        'Цитрусы', 'Бергамот',
+        'Нет таких — открыт(а) ко всему'
+      ]}
+    ]
+  },
+  // 9. Текущие ароматы
+  { q: 'Какими ароматами вы сейчас пользуетесь?', type: 'text',
+    placeholder: 'Например: Chanel Coco Mademoiselle, Dior Sauvage, что-то от Zara...\n\nЕсли не помните название — опишите характер аромата'
+  },
+  // 10. Любимые ароматы за всю жизнь
+  { q: 'А какие ароматы когда-либо были вашими любимыми?', type: 'text',
+    placeholder: 'Перечислите ароматы, которые вам нравились раньше. Даже если давно — это важно для портрета'
+  },
+  // 11. Сезон
+  { q: 'Для какого сезона подбираем?', type: 'multi', opts: [
+    '🌸 Весна', '☀️ Лето', '🍂 Осень', '❄️ Зима',
+    '🔄 Круглый год — универсальные', '🎨 Хочу разные под каждый сезон'
+  ]},
+  // 12. Время суток
+  { q: 'В какое время суток вы чаще носите парфюм?', type: 'multi', opts: [
+    '🌅 Утро — на работу / учёбу', '☀️ Днём — в течение дня',
+    '🌆 Вечер — выход / свидание', '🌙 Ночь — для себя / сон',
+    '🔄 Весь день — один аромат'
+  ]},
+  // 13. Настроение
+  { q: 'Какое настроение должен создавать аромат?', type: 'chips', hint: 'Выберите всё, что резонирует',
+    sections: [
+      { label: 'Настроение', chips: [
+        '😌 Спокойствие', '⚡ Энергия', '💕 Романтика', '🔥 Страсть / соблазн',
+        '✨ Уверенность', '🌊 Свежесть', '🎭 Загадочность', '🤗 Уют / тепло',
+        '🌸 Нежность', '💪 Сила / мощь', '🎉 Праздник / радость', '🧘 Медитация / гармония',
+        '👑 Роскошь / элегантность', '🌿 Природа / натуральность', '🖤 Дерзость / бунт'
+      ]}
+    ]
+  },
+  // 14. Ассоциации
+  { q: 'С какими образами ассоциируется ваш идеальный аромат?', type: 'chips', hint: 'Выберите близкие образы',
+    sections: [
+      { label: 'Образы и ассоциации', chips: [
+        '🌹 Букет свежих цветов', '☕ Кофейня осенним утром',
+        '🌊 Морской бриз на закате', '📚 Старая библиотека',
+        '🕯️ Свечи и камин', '🍊 Средиземноморский сад',
+        '🏔️ Горный воздух после дождя', '🎭 Вечер в театре',
+        '🌌 Звёздная ночь', '🍰 Французская кондитерская',
+        '🌿 Прогулка в лесу', '💎 Бутик люксовых вещей',
+        '🏜️ Тёплый песок и специи', '🎹 Джаз-бар поздно вечером',
+        '🌺 Тропический остров', '🏰 Старинный замок'
+      ]}
+    ]
+  },
+  // 15. Стойкость
+  { q: 'Какая стойкость для вас идеальна?', type: 'single', opts: [
+    '⏳ 2–4 часа — лёгкий, ненавязчивый', '⏳ 4–6 часов — на полдня',
+    '⏳ 6–8 часов — на весь день', '⏳ 8–12+ часов — чтобы на одежде оставался'
+  ]},
+  // 16. Готовность к экспериментам
+  { q: 'Насколько вы открыты к экспериментам?', type: 'single', opts: [
+    '🔬 Максимально — хочу нишу, авангард, необычное!',
+    '🌿 Умеренно — классика с интересными нюансами',
+    '🛡️ Консервативно — проверенные направления',
+    '🎯 50/50 — половину знакомого, половину нового'
+  ]},
+  // 17. Бюджет восприятия (не цена подписки, а уровень ароматов)
+  { q: 'Какой уровень ароматов вам ближе?', type: 'single', opts: [
+    '🏪 Масс-маркет — Zara, H&M, масс-бренды',
+    '💼 Люкс — Chanel, Dior, Tom Ford, YSL',
+    '🔮 Нишевая парфюмерия — Byredo, Le Labo, Nasomatto',
+    '👑 Высокая парфюмерия — Roja, Xerjoff, Amouage',
+    '🎨 Всё интересно — от масс до ниши'
+  ]},
+  // 18. Гардероб
+  { q: 'Сколько ароматов вы носите обычно?', type: 'single', opts: [
+    '1 — один на все случаи', '2–3 — под настроение',
+    '4–7 — небольшая коллекция', '8+ — много, люблю разнообразие'
+  ]},
+  // 19. Аллергии
+  { q: 'Есть ли аллергии или чувствительность?', type: 'multi', hint: 'Важно для безопасного подбора', opts: [
+    '✅ Нет аллергий', '⚠️ Чувствительная кожа',
+    '⚠️ Аллергия на определённые компоненты', '⚠️ Мигрень от резких запахов',
+    '⚠️ Астма / дыхательная чувствительность'
+  ]},
+  // 20. Цель подписки и пожелания
+  { q: 'Чего вы ждёте от подписки DARBOX?', type: 'text',
+    placeholder: 'Расскажите своими словами:\n— Что хотите получить?\n— Есть ли конкретные ароматы, которые хотите попробовать?\n— Любые пожелания парфюмеру'
+  },
 ];
 
 let qStep = 0;
@@ -1667,38 +1871,73 @@ function initQuestionnaire() {
 
 function renderQuestion() {
   const prog = document.getElementById('q-progress');
-  prog.innerHTML = questions.map((_, i) => 
-    `<div class="q-dot ${i < qStep ? 'done' : i === qStep ? 'current' : ''}"></div>`
-  ).join('');
+  // Compact progress: show step counter instead of dots for 20 questions
+  prog.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;width:100%">
+      <div style="flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${(qStep / questions.length) * 100}%;background:linear-gradient(90deg,var(--accent),#FF6B9D);border-radius:2px;transition:width 0.4s ease"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;font-weight:600"><span style="color:var(--accent)">${qStep + 1 > questions.length ? questions.length : qStep + 1}</span> / ${questions.length}</div>
+    </div>`;
   
   const content = document.getElementById('q-content');
   if (qStep >= questions.length) {
     content.innerHTML = `
       <div style="text-align:center;padding:40px 0">
-        <div style="font-size:60px;margin-bottom:16px">✨</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;margin-bottom:8px">Готово!</div>
-        <div style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:24px">Ваш ольфакторный портрет обновлён.<br>Мы подберём идеальные ароматы для вас.</div>
-        <button class="cta-btn" onclick="navigateTo('profile')">Перейти в профиль</button>
+        <div style="font-size:60px;margin-bottom:16px;animation:badge-pop 0.5s cubic-bezier(0.22,1,0.36,1) both">✨</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;margin-bottom:8px;animation:fadeUp 0.5s 0.1s both">Ваш портрет готов!</div>
+        <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;animation:fadeUp 0.5s 0.2s both">20 из 20 вопросов — отличная работа!<br>Мы составили детальный ольфакторный профиль.</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;animation:fadeUp 0.5s 0.3s both">Парфюмер подберёт идеальные ароматы<br>специально для вас 💐</div>
+        <button class="cta-btn" onclick="navigateTo('profile')" style="animation:fadeUp 0.5s 0.4s both">Перейти в профиль</button>
       </div>`;
     return;
   }
   
   const q = questions[qStep];
+  let optionsHTML = '';
+  
+  if (q.type === 'chips') {
+    // Chip-style multi-select with sections
+    optionsHTML = `<div class="q-chips-container">`;
+    for (const section of q.sections) {
+      optionsHTML += `<div class="q-section-label">${section.label}</div><div class="q-chips">`;
+      for (const chip of section.chips) {
+        optionsHTML += `<div class="q-chip" onclick="toggleChip(this)">${chip}</div>`;
+      }
+      optionsHTML += `</div>`;
+    }
+    optionsHTML += `</div>`;
+  } else if (q.type === 'text') {
+    // Free text input
+    optionsHTML = `<textarea class="q-text-input" id="q-text-area" placeholder="${q.placeholder}" oninput="onTextInput()"></textarea>`;
+  } else {
+    // Standard single/multi select
+    const isMulti = q.type === 'multi';
+    optionsHTML = `<div class="q-options">${q.opts.map((opt, i) => `
+      <div class="q-option" onclick="selectQOption(this, ${i}, ${isMulti})">
+        <div class="q-option-check"></div>
+        ${opt}
+      </div>`).join('')}</div>`;
+  }
+  
+  const hintHTML = q.hint ? `<div class="q-hint">${q.hint}</div>` : '';
+  
   content.innerHTML = `
     <div class="q-question">${q.q}</div>
-    <div class="q-options">
-      ${q.opts.map((opt, i) => `
-        <div class="q-option" onclick="selectQOption(this, ${i}, ${!!q.multi})">
-          <div class="q-option-check"></div>
-          ${opt}
-        </div>
-      `).join('')}
-    </div>
+    ${hintHTML}
+    ${optionsHTML}
+    <div class="q-counter" id="q-chip-counter"></div>
     <button class="q-next" onclick="nextQuestion()" id="q-next-btn">Далее →</button>
   `;
+  
+  // Auto-ready for text inputs if they already have content
+  if (q.type === 'text') {
+    updateNextBtn(false);
+  }
 }
 
 let selectedQOptions = [];
+let selectedChips = [];
 
 function selectQOption(el, idx, multi) {
   if (multi) {
@@ -1713,15 +1952,58 @@ function selectQOption(el, idx, multi) {
     el.classList.add('selected');
     selectedQOptions = [idx];
   }
-  document.getElementById('q-next-btn').classList.toggle('ready', selectedQOptions.length > 0);
+  updateNextBtn(selectedQOptions.length > 0);
+}
+
+function toggleChip(el) {
+  el.classList.toggle('selected');
+  selectedChips = [...document.querySelectorAll('.q-chip.selected')].map(c => c.textContent.trim());
+  const counter = document.getElementById('q-chip-counter');
+  if (counter) {
+    counter.innerHTML = selectedChips.length > 0 
+      ? `Выбрано: <b>${selectedChips.length}</b>` 
+      : '';
+  }
+  updateNextBtn(selectedChips.length > 0);
+}
+
+function onTextInput() {
+  const textarea = document.getElementById('q-text-area');
+  const hasText = textarea && textarea.value.trim().length > 0;
+  updateNextBtn(hasText);
+}
+
+function updateNextBtn(ready) {
+  const btn = document.getElementById('q-next-btn');
+  if (btn) btn.classList.toggle('ready', ready);
 }
 
 function nextQuestion() {
-  if (selectedQOptions.length === 0) return;
-  qAnswers.push([...selectedQOptions]);
+  const q = questions[qStep];
+  
+  if (q.type === 'chips') {
+    if (selectedChips.length === 0) return;
+    qAnswers.push({ type: 'chips', values: [...selectedChips] });
+  } else if (q.type === 'text') {
+    const textarea = document.getElementById('q-text-area');
+    const text = textarea ? textarea.value.trim() : '';
+    if (!text) {
+      // Allow skipping text with confirmation
+      qAnswers.push({ type: 'text', value: '' });
+    } else {
+      qAnswers.push({ type: 'text', value: text });
+    }
+  } else {
+    if (selectedQOptions.length === 0) return;
+    qAnswers.push({ type: q.type, values: [...selectedQOptions] });
+  }
+  
   selectedQOptions = [];
+  selectedChips = [];
   qStep++;
   renderQuestion();
+  // Scroll to top of question
+  document.getElementById('q-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // === CHAT ===
