@@ -1,2053 +1,1161 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DARBOX — Парфюмерная подписка</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root {
-  --accent: #EE2970;
-  --accent-soft: rgba(238,41,112,0.15);
-  --accent-glow: rgba(238,41,112,0.4);
-  --bg: #0A0A0C;
-  --bg-card: #141418;
-  --bg-card-hover: #1A1A20;
-  --bg-elevated: #1E1E24;
-  --text: #F2F0ED;
-  --text-secondary: #8A8890;
-  --text-muted: #555560;
-  --border: rgba(255,255,255,0.06);
-  --border-accent: rgba(238,41,112,0.3);
-  --gold: #D4A853;
-  --gold-soft: rgba(212,168,83,0.15);
-  --radius: 16px;
-  --radius-sm: 10px;
-  --radius-xs: 6px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html { background: var(--bg); }
-body {
-  font-family: 'Manrope', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* === SCROLLBAR === */
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 4px; }
-
-/* === ANIMATIONS === */
-@keyframes fadeUp {
-  from { opacity:0; transform:translateY(24px); }
-  to { opacity:1; transform:translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity:0; }
-  to { opacity:1; }
-}
-@keyframes scaleIn {
-  from { opacity:0; transform:scale(0.92); }
-  to { opacity:1; transform:scale(1); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px var(--accent-glow), 0 0 60px rgba(238,41,112,0.1); }
-  50% { box-shadow: 0 0 30px var(--accent-glow), 0 0 80px rgba(238,41,112,0.2); }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-@keyframes radar-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes slide-right {
-  from { opacity:0; transform:translateX(-20px); }
-  to { opacity:1; transform:translateX(0); }
-}
-@keyframes progress-fill {
-  from { width: 0; }
-}
-@keyframes badge-pop {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.animate-up { animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
-.animate-in { animation: fadeIn 0.5s ease both; }
-.animate-scale { animation: scaleIn 0.5s cubic-bezier(0.22,1,0.36,1) both; }
-
-/* === PAGE STRUCTURE === */
-.app {
-  max-width: 100%;
-  min-height: 100vh;
-  position: relative;
-}
-
-.page {
-  display: none;
-  padding: 0 16px 100px;
-  min-height: 100vh;
-}
-.page.active { display: block; }
-
-/* === HEADER === */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(10,10,12,0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-.header-back {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.header-back:active { transform: scale(0.92); background: var(--bg-elevated); }
-.header-back svg { width: 18px; height: 18px; }
-.header-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-/* === BOTTOM NAV === */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0; right: 0;
-  z-index: 200;
-  background: rgba(10,10,12,0.92);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid var(--border);
-  display: flex;
-  padding: 8px 4px calc(8px + var(--safe-bottom));
-}
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 2px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 12px;
-  position: relative;
-}
-.nav-item svg { width: 22px; height: 22px; color: var(--text-muted); transition: all 0.25s; }
-.nav-item span { font-size: 10px; color: var(--text-muted); font-weight: 500; transition: all 0.25s; letter-spacing: 0.02em; }
-.nav-item.active svg { color: var(--accent); }
-.nav-item.active span { color: var(--accent); }
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%; transform: translateX(-50%);
-  width: 20px; height: 3px;
-  background: var(--accent);
-  border-radius: 0 0 4px 4px;
-}
-.nav-item:active { transform: scale(0.92); }
-
-/* === HOME PAGE === */
-.hero {
-  padding: 40px 0 24px;
-  text-align: center;
-  animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
-}
-.hero-logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 42px;
-  font-weight: 300;
-  letter-spacing: 0.15em;
-  margin-bottom: 2px;
-  background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.hero-logo b { font-weight: 700; -webkit-text-fill-color: var(--accent); }
-.hero-sub {
-  font-size: 13px;
-  color: var(--text-muted);
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-.hero-tagline {
-  margin-top: 20px;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 18px;
-  font-weight: 300;
-  font-style: italic;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-/* === LEVEL BADGE === */
-.level-card {
-  margin: 24px 0;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(238,41,112,0.05) 100%);
-  border: 1px solid var(--border-accent);
-  border-radius: var(--radius);
-  animation: fadeUp 0.7s 0.1s cubic-bezier(0.22,1,0.36,1) both;
-  position: relative;
-  overflow: hidden;
-}
-.level-card::before {
-  content: '';
-  position: absolute;
-  top: -50%; right: -50%;
-  width: 100%; height: 100%;
-  background: radial-gradient(circle, rgba(238,41,112,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.level-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; position: relative; }
-.level-icon {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px;
-  animation: float 3s ease-in-out infinite;
-  border: 2px solid rgba(238,41,112,0.3);
-}
-.level-info { flex: 1; }
-.level-name {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--accent);
-  font-weight: 700;
-  margin-bottom: 2px;
-}
-.level-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px;
-  font-weight: 600;
-}
-.level-xp {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.level-bar {
-  height: 6px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 3px;
-  overflow: hidden;
-  position: relative;
-}
-.level-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), #FF6B9D);
-  border-radius: 3px;
-  animation: progress-fill 1.2s cubic-bezier(0.22,1,0.36,1) both;
-  animation-delay: 0.4s;
-  position: relative;
-}
-.level-bar-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-/* === SECTION CARDS === */
-.section-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px;
-  font-weight: 500;
-  margin: 28px 0 14px;
-  padding-left: 2px;
-}
-
-.menu-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.menu-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 14px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
-  position: relative;
-  overflow: hidden;
-}
-.menu-card:active { transform: scale(0.96); }
-.menu-card:hover { border-color: var(--border-accent); background: var(--bg-card-hover); }
-.menu-card-icon {
-  font-size: 28px;
-  margin-bottom: 10px;
-  display: block;
-}
-.menu-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 3px;
-}
-.menu-card-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-.menu-card.accent {
-  border-color: var(--border-accent);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(238,41,112,0.06) 100%);
-}
-.menu-card.accent::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 60px; height: 60px;
-  background: radial-gradient(circle at top right, rgba(238,41,112,0.12), transparent);
-  pointer-events: none;
-}
-
-/* === SUBSCRIPTION PAGE === */
-.plan-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.plan-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
-  position: relative;
-  overflow: hidden;
-}
-.plan-card:active { transform: scale(0.98); }
-.plan-card.selected {
-  border-color: var(--accent);
-  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(238,41,112,0.08) 100%);
-}
-.plan-card.selected::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  padding: 1px;
-  background: linear-gradient(135deg, var(--accent), transparent 60%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-.plan-popular {
-  position: absolute;
-  top: 12px; right: 12px;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 4px 10px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 20px;
-  font-weight: 700;
-}
-.plan-format {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.plan-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
-.plan-price {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--accent);
-}
-.plan-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
-
-/* Duration selector */
-.duration-section { margin-top: 24px; }
-.duration-options { display: flex; gap: 8px; margin-top: 12px; }
-.dur-btn {
-  flex: 1;
-  padding: 14px 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.25s;
-  color: var(--text);
-  position: relative;
-}
-.dur-btn:active { transform: scale(0.96); }
-.dur-btn.selected { border-color: var(--accent); background: var(--accent-soft); }
-.dur-btn-months { font-size: 18px; font-weight: 700; display: block; }
-.dur-btn-discount {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  display: block;
-}
-.dur-btn.selected .dur-btn-discount { color: var(--accent); }
-.dur-btn-badge {
-  position: absolute;
-  top: -6px; right: -4px;
-  font-size: 9px;
-  padding: 2px 6px;
-  background: var(--gold);
-  color: #000;
-  border-radius: 8px;
-  font-weight: 700;
-}
-
-/* Delivery */
-.delivery-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.delivery-btn {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.25s;
-  color: var(--text);
-}
-.delivery-btn:active { transform: scale(0.97); }
-.delivery-btn.selected { border-color: var(--accent); background: var(--accent-soft); }
-.delivery-btn-icon { font-size: 20px; }
-.delivery-btn-info { flex: 1; }
-.delivery-btn-name { font-size: 14px; font-weight: 600; }
-.delivery-btn-detail { font-size: 11px; color: var(--text-muted); }
-.delivery-btn-price { font-size: 14px; font-weight: 700; color: var(--accent); }
-
-/* CTA */
-.cta-btn {
-  width: 100%;
-  padding: 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
-  font-family: 'Manrope', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  margin-top: 24px;
-  transition: all 0.25s;
-  position: relative;
-  overflow: hidden;
-}
-.cta-btn:active { transform: scale(0.97); }
-.cta-btn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 3s infinite;
-}
-.cta-total {
-  text-align: center;
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* === PROFILE PAGE === */
-.profile-header {
-  text-align: center;
-  padding: 30px 0 20px;
-}
-.profile-avatar {
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #FF6B9D);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 32px;
-  margin: 0 auto 14px;
-  border: 3px solid var(--bg);
-  box-shadow: 0 0 0 2px var(--accent);
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-.profile-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 26px;
-  font-weight: 600;
-}
-.profile-level {
-  font-size: 12px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-weight: 700;
-  margin-top: 4px;
-}
-.profile-stats {
-  display: flex;
-  gap: 1px;
-  margin: 20px 0;
-  background: var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.profile-stat {
-  flex: 1;
-  padding: 16px 8px;
-  text-align: center;
-  background: var(--bg-card);
-}
-.profile-stat-val {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--accent);
-}
-.profile-stat-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: 2px;
-}
-
-/* === DNA RADAR === */
-.dna-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px 16px;
-  margin: 16px 0;
-}
-.dna-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 20px;
-  text-align: center;
-  margin-bottom: 20px;
-}
-.radar-container {
-  width: 100%;
-  max-width: 300px;
-  margin: 0 auto;
-  aspect-ratio: 1;
-}
-.radar-container svg { width: 100%; height: 100%; }
-
-/* === BADGES === */
-.badges-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 16px;
-}
-.badge-item {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 8px;
-  text-align: center;
-  transition: all 0.25s;
-}
-.badge-item.earned {
-  border-color: var(--gold);
-  background: linear-gradient(135deg, var(--bg-card) 0%, var(--gold-soft) 100%);
-}
-.badge-icon {
-  font-size: 30px;
-  display: block;
-  margin-bottom: 8px;
-}
-.badge-item:not(.earned) .badge-icon { filter: grayscale(1) opacity(0.3); }
-.badge-name {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  line-height: 1.3;
-}
-.badge-item:not(.earned) .badge-name { color: var(--text-muted); }
-
-/* === DIARY PAGE === */
-.diary-entry {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 10px;
-  transition: all 0.25s;
-}
-.diary-entry:active { transform: scale(0.98); }
-.diary-date {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.diary-mood {
-  background: var(--accent-soft);
-  color: var(--accent);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-}
-.diary-aroma {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-.diary-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-.diary-rating { display: flex; gap: 12px; margin-top: 10px; }
-.diary-rating-item {
-  font-size: 11px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.diary-rating-item .stars { color: var(--gold); font-size: 12px; }
-
-/* Fab button */
-.fab {
-  position: fixed;
-  bottom: 80px;
-  right: 16px;
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: none;
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 4px 20px var(--accent-glow);
-  z-index: 150;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s;
-}
-.fab:active { transform: scale(0.9); }
-
-/* === TASTE MAP === */
-.taste-chart {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin: 16px 0;
-}
-.taste-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.taste-label {
-  width: 80px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: right;
-  flex-shrink: 0;
-}
-.taste-track {
-  flex: 1;
-  height: 8px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.taste-fill {
-  height: 100%;
-  border-radius: 4px;
-  animation: progress-fill 1s cubic-bezier(0.22,1,0.36,1) both;
-}
-.taste-val {
-  width: 30px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-/* === GIFT PAGE === */
-.gift-card-preview {
-  margin: 24px auto;
-  max-width: 320px;
-  aspect-ratio: 1.6;
-  background: linear-gradient(135deg, #1a0a12 0%, #2a0a18 40%, #0a0a0c 100%);
-  border: 1px solid var(--border-accent);
-  border-radius: var(--radius);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  position: relative;
-  overflow: hidden;
-  animation: scaleIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
-}
-.gift-card-preview::before {
-  content: '';
-  position: absolute;
-  top: -30%; right: -30%;
-  width: 60%; height: 60%;
-  background: radial-gradient(circle, rgba(238,41,112,0.15), transparent 70%);
-  pointer-events: none;
-}
-.gift-card-preview::after {
-  content: '';
-  position: absolute;
-  bottom: -20%; left: -20%;
-  width: 50%; height: 50%;
-  background: radial-gradient(circle, rgba(212,168,83,0.08), transparent 70%);
-  pointer-events: none;
-}
-.gift-brand {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 28px;
-  font-weight: 300;
-  letter-spacing: 0.1em;
-  position: relative;
-}
-.gift-brand b { font-weight: 700; color: var(--accent); }
-.gift-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-.gift-amount {
-  font-size: 36px;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), #FF6B9D, var(--gold));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  position: relative;
-}
-
-/* === REFERRAL === */
-.ref-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  text-align: center;
-  margin: 16px 0;
-}
-.ref-link-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-}
-.ref-link {
-  flex: 1;
-  font-size: 13px;
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-.ref-copy {
-  padding: 8px 14px;
-  background: var(--accent);
-  border: none;
-  border-radius: var(--radius-xs);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'Manrope', sans-serif;
-}
-.ref-copy:active { transform: scale(0.95); }
-.ref-reward {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--gold-soft);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gold);
-}
-
-/* === QUESTIONNAIRE === */
-.q-progress {
-  display: flex;
-  gap: 3px;
-  margin: 16px 0;
-}
-.q-dot {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.06);
-  transition: all 0.4s;
-}
-.q-dot.done { background: var(--accent); }
-.q-dot.current { background: linear-gradient(90deg, var(--accent), #FF6B9D); }
-
-.q-question {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 24px;
-  font-weight: 500;
-  line-height: 1.3;
-  margin: 24px 0 20px;
-  animation: fadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both;
-}
-.q-options { display: flex; flex-direction: column; gap: 8px; }
-.q-option {
-  padding: 14px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.25s;
-  font-size: 14px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.q-option:active { transform: scale(0.97); }
-.q-option.selected { border-color: var(--accent); background: var(--accent-soft); }
-.q-option-check {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  border: 2px solid var(--text-muted);
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.25s;
-  flex-shrink: 0;
-}
-.q-option.selected .q-option-check {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.q-option.selected .q-option-check::after {
-  content: '✓';
-  font-size: 12px;
-  color: #fff;
-}
-.q-next {
-  padding: 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-  font-family: 'Manrope', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  width: 100%;
-  margin-top: 16px;
-  cursor: pointer;
-  transition: all 0.25s;
-}
-.q-next.ready { background: var(--accent); color: #fff; }
-.q-next:active { transform: scale(0.97); }
-
-/* Multi-select chip grid for notes */
-.q-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.q-chip {
-  padding: 8px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.q-chip:active { transform: scale(0.95); }
-.q-chip.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-}
-.q-chip .chip-emoji { margin-right: 4px; }
-
-.q-section-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
-  margin: 16px 0 8px;
-  padding-left: 2px;
-  font-weight: 600;
-}
-.q-section-label:first-child { margin-top: 0; }
-
-.q-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: -8px 0 12px;
-  font-style: italic;
-}
-
-/* Text input in questionnaire */
-.q-text-input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: 'Manrope', sans-serif;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-  margin-top: 4px;
-  resize: none;
-  min-height: 80px;
-}
-.q-text-input:focus { border-color: var(--accent); }
-.q-text-input::placeholder { color: var(--text-muted); }
-
-.q-counter {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-.q-counter b { color: var(--accent); }
-
-/* === CHAT === */
-.chat-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 0;
-}
-.chat-msg {
-  max-width: 80%;
-  padding: 12px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.5;
-  animation: scaleIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
-}
-.chat-msg.user {
-  align-self: flex-end;
-  background: var(--accent);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-.chat-msg.admin {
-  align-self: flex-start;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-bottom-left-radius: 4px;
-}
-.chat-msg-time {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-.chat-input-area {
-  position: fixed;
-  bottom: 68px;
-  left: 0; right: 0;
-  padding: 12px 16px;
-  background: rgba(10,10,12,0.95);
-  backdrop-filter: blur(20px);
-  display: flex;
-  gap: 8px;
-  z-index: 150;
-}
-.chat-input {
-  flex: 1;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  color: var(--text);
-  font-family: 'Manrope', sans-serif;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.chat-input:focus { border-color: var(--accent); }
-.chat-input::placeholder { color: var(--text-muted); }
-.chat-send {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.chat-send:active { transform: scale(0.9); }
-
-/* Utility */
-.spacer { height: 16px; }
-.divider { height: 1px; background: var(--border); margin: 20px 0; }
-.text-accent { color: var(--accent); }
-.text-gold { color: var(--gold); }
-.text-muted { color: var(--text-muted); }
-.text-center { text-align: center; }
-.mt-8 { margin-top: 8px; }
-.mt-16 { margin-top: 16px; }
-.mt-24 { margin-top: 24px; }
-</style>
-</head>
-<body>
-
-<div class="app" id="app">
-
-  <!-- ============ HOME PAGE ============ -->
-  <div class="page active" id="page-home">
-    <div class="hero">
-      <div class="hero-logo">DAR<b>BOX</b></div>
-      <div class="hero-sub">парфюмерная подписка</div>
-      <div class="hero-tagline">Откройте свой идеальный аромат<br>через персональный подбор</div>
-    </div>
-
-    <div class="level-card">
-      <div class="level-top">
-        <div class="level-icon">🌿</div>
-        <div class="level-info">
-          <div class="level-name">Уровень 2</div>
-          <div class="level-title">Исследователь</div>
-          <div class="level-xp">340 / 600 XP</div>
-        </div>
-      </div>
-      <div class="level-bar">
-        <div class="level-bar-fill" style="width:57%"></div>
-      </div>
-    </div>
-
-    <div class="section-title">Ваша подписка</div>
-    <div class="menu-grid">
-      <div class="menu-card accent" onclick="navigateTo('subscription')">
-        <span class="menu-card-icon">📦</span>
-        <div class="menu-card-title">Подписка</div>
-        <div class="menu-card-desc">Выбрать тариф и оформить</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('profile')">
-        <span class="menu-card-icon">👤</span>
-        <div class="menu-card-title">Профиль</div>
-        <div class="menu-card-desc">Ваш ольфакторный портрет</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('diary')">
-        <span class="menu-card-icon">📔</span>
-        <div class="menu-card-title">Дневник</div>
-        <div class="menu-card-desc">Записи об ароматах</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('taste')">
-        <span class="menu-card-icon">🎯</span>
-        <div class="menu-card-title">Карта вкуса</div>
-        <div class="menu-card-desc">Аналитика предпочтений</div>
-      </div>
-    </div>
-
-    <div class="section-title">Бонусы</div>
-    <div class="menu-grid">
-      <div class="menu-card" onclick="navigateTo('badges')">
-        <span class="menu-card-icon">🏆</span>
-        <div class="menu-card-title">Ачивки</div>
-        <div class="menu-card-desc">3 из 12 получено</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('referral')">
-        <span class="menu-card-icon">🎁</span>
-        <div class="menu-card-title">Друзьям</div>
-        <div class="menu-card-desc">10% за каждого друга</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('gift')">
-        <span class="menu-card-icon">💌</span>
-        <div class="menu-card-title">Сертификат</div>
-        <div class="menu-card-desc">Подарить подписку</div>
-      </div>
-      <div class="menu-card" onclick="navigateTo('chat')">
-        <span class="menu-card-icon">💬</span>
-        <div class="menu-card-title">Чат</div>
-        <div class="menu-card-desc">Написать парфюмеру</div>
-      </div>
-    </div>
-
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ SUBSCRIPTION PAGE ============ -->
-  <div class="page" id="page-subscription">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Подписка</div>
-    </div>
-
-    <div class="section-title">Выберите формат</div>
-    <div class="plan-cards">
-      <div class="plan-card selected" onclick="selectPlan(this, 0)">
-        <div class="plan-format">8 × 3 мл</div>
-        <div class="plan-desc">8 ароматов в миниатюрах — попробуйте всё</div>
-        <div class="plan-price">1 980 ₽ <span>/мес</span></div>
-      </div>
-      <div class="plan-card" onclick="selectPlan(this, 1)">
-        <div class="plan-popular">Хит</div>
-        <div class="plan-format">6 × 6 мл</div>
-        <div class="plan-desc">Оптимальный формат на каждый день</div>
-        <div class="plan-price">2 380 ₽ <span>/мес</span></div>
-      </div>
-      <div class="plan-card" onclick="selectPlan(this, 2)">
-        <div class="plan-format">5 × 10 мл</div>
-        <div class="plan-desc">Полноразмерные флаконы для ценителей</div>
-        <div class="plan-price">3 580 ₽ <span>/мес</span></div>
-      </div>
-    </div>
-
-    <div class="duration-section">
-      <div class="section-title">Срок подписки</div>
-      <div class="duration-options">
-        <div class="dur-btn selected" onclick="selectDuration(this, 0)">
-          <span class="dur-btn-months">2 мес</span>
-          <span class="dur-btn-discount">без скидки</span>
-        </div>
-        <div class="dur-btn" onclick="selectDuration(this, 1)">
-          <span class="dur-btn-months">4 мес</span>
-          <span class="dur-btn-discount">−5%</span>
-        </div>
-        <div class="dur-btn" onclick="selectDuration(this, 2)">
-          <div class="dur-btn-badge">−10%</div>
-          <span class="dur-btn-months">6 мес</span>
-          <span class="dur-btn-discount">выгодно</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="duration-section">
-      <div class="section-title">Доставка</div>
-      <div class="delivery-options">
-        <div class="delivery-btn selected" onclick="selectDelivery(this)">
-          <span class="delivery-btn-icon">📮</span>
-          <div class="delivery-btn-info">
-            <div class="delivery-btn-name">Почта России</div>
-            <div class="delivery-btn-detail">7–14 дней</div>
-          </div>
-          <div class="delivery-btn-price">280 ₽</div>
-        </div>
-        <div class="delivery-btn" onclick="selectDelivery(this)">
-          <span class="delivery-btn-icon">📦</span>
-          <div class="delivery-btn-info">
-            <div class="delivery-btn-name">СДЭК</div>
-            <div class="delivery-btn-detail">3–5 дней</div>
-          </div>
-          <div class="delivery-btn-price">280 ₽</div>
-        </div>
-        <div class="delivery-btn" onclick="selectDelivery(this)">
-          <span class="delivery-btn-icon">🚗</span>
-          <div class="delivery-btn-info">
-            <div class="delivery-btn-name">Курьер Москва</div>
-            <div class="delivery-btn-detail">1–2 дня</div>
-          </div>
-          <div class="delivery-btn-price">350 ₽</div>
-        </div>
-      </div>
-    </div>
-
-    <button class="cta-btn" onclick="alert('Переход к оплате')">Оформить подписку</button>
-    <div class="cta-total">Итого: 1 980 ₽ + доставка 280 ₽ = <strong style="color:var(--accent)">2 260 ₽</strong></div>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ PROFILE PAGE ============ -->
-  <div class="page" id="page-profile">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Профиль</div>
-    </div>
-
-    <div class="profile-header">
-      <div class="profile-avatar">🌸</div>
-      <div class="profile-name">Анна</div>
-      <div class="profile-level">✦ Исследователь</div>
-    </div>
-
-    <div class="profile-stats">
-      <div class="profile-stat">
-        <div class="profile-stat-val">4</div>
-        <div class="profile-stat-label">Боксов</div>
-      </div>
-      <div class="profile-stat">
-        <div class="profile-stat-val">26</div>
-        <div class="profile-stat-label">Ароматов</div>
-      </div>
-      <div class="profile-stat">
-        <div class="profile-stat-val">18</div>
-        <div class="profile-stat-label">Отзывов</div>
-      </div>
-      <div class="profile-stat">
-        <div class="profile-stat-val">2</div>
-        <div class="profile-stat-label">Друзей</div>
-      </div>
-    </div>
-
-    <!-- DNA Radar -->
-    <div class="dna-card">
-      <div class="dna-title">Парфюмерная ДНК</div>
-      <div class="radar-container" id="radar-chart"></div>
-    </div>
-
-    <div class="section-title">Ольфакторный портрет</div>
-    <div class="diary-entry">
-      <div class="diary-aroma" style="font-size:15px">Пол: Женский · Возраст: 25–34</div>
-      <div class="diary-text">Повод: на каждый день · Интенсивность: средняя<br>Опыт: продвинутый · Сезон: весна/лето</div>
-    </div>
-    <div class="diary-entry">
-      <div class="diary-aroma" style="font-size:15px">Любимые ноты</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-        <span style="padding:4px 12px;background:var(--accent-soft);border-radius:20px;font-size:12px;color:var(--accent)">Цветочные</span>
-        <span style="padding:4px 12px;background:var(--accent-soft);border-radius:20px;font-size:12px;color:var(--accent)">Мускусные</span>
-        <span style="padding:4px 12px;background:var(--accent-soft);border-radius:20px;font-size:12px;color:var(--accent)">Фруктовые</span>
-        <span style="padding:4px 12px;background:var(--gold-soft);border-radius:20px;font-size:12px;color:var(--gold)">Ваниль</span>
-      </div>
-    </div>
-
-    <button class="cta-btn" onclick="navigateTo('questionnaire')" style="background:var(--bg-elevated);color:var(--text)">✏️ Пройти анкету заново</button>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ DIARY PAGE ============ -->
-  <div class="page" id="page-diary">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Парфюмерный дневник</div>
-    </div>
-
-    <div style="padding-top:12px">
-      <div class="diary-entry animate-up" style="animation-delay:0.05s">
-        <div class="diary-date">14 марта 2026 <span class="diary-mood">🌸 Романтика</span></div>
-        <div class="diary-aroma">Baccarat Rouge 540</div>
-        <div class="diary-text">Невероятный шлейф, комплименты весь день. Идеален для свидания — тёплый, обволакивающий, с карамельной дымкой.</div>
-        <div class="diary-rating">
-          <div class="diary-rating-item"><span class="stars">★★★★★</span> Общее</div>
-          <div class="diary-rating-item"><span class="stars">★★★★★</span> Стойкость</div>
-          <div class="diary-rating-item"><span class="stars">★★★★☆</span> Шлейф</div>
-        </div>
-      </div>
-
-      <div class="diary-entry animate-up" style="animation-delay:0.1s">
-        <div class="diary-date">10 марта 2026 <span class="diary-mood">☀️ Энергия</span></div>
-        <div class="diary-aroma">Aventus</div>
-        <div class="diary-text">Свежий и дерзкий. Отлично для деловых встреч. Ананас и берёза — необычное, но гармоничное сочетание.</div>
-        <div class="diary-rating">
-          <div class="diary-rating-item"><span class="stars">★★★★☆</span> Общее</div>
-          <div class="diary-rating-item"><span class="stars">★★★★★</span> Стойкость</div>
-          <div class="diary-rating-item"><span class="stars">★★★☆☆</span> Шлейф</div>
-        </div>
-      </div>
-
-      <div class="diary-entry animate-up" style="animation-delay:0.15s">
-        <div class="diary-date">5 марта 2026 <span class="diary-mood">🌙 Вечер</span></div>
-        <div class="diary-aroma">Black Orchid</div>
-        <div class="diary-text">Тёмный, загадочный. Чёрная орхидея и трюфель создают чувственный вечерний образ. Не на каждый день.</div>
-        <div class="diary-rating">
-          <div class="diary-rating-item"><span class="stars">★★★★☆</span> Общее</div>
-          <div class="diary-rating-item"><span class="stars">★★★★★</span> Стойкость</div>
-          <div class="diary-rating-item"><span class="stars">★★★★★</span> Шлейф</div>
-        </div>
-      </div>
-    </div>
-
-    <button class="fab" onclick="alert('Добавить запись')">+</button>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ TASTE MAP PAGE ============ -->
-  <div class="page" id="page-taste">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Карта вкуса</div>
-    </div>
-
-    <div class="dna-card" style="margin-top:16px">
-      <div class="dna-title">Топ-5 фаворитов</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:20px">🥇</span>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">Baccarat Rouge 540</div>
-            <div style="font-size:11px;color:var(--text-muted)">Maison Francis Kurkdjian</div>
-          </div>
-          <div style="font-size:14px;font-weight:700;color:var(--gold)">4.8</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:20px">🥈</span>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">Lost Cherry</div>
-            <div style="font-size:11px;color:var(--text-muted)">Tom Ford</div>
-          </div>
-          <div style="font-size:14px;font-weight:700;color:var(--text-secondary)">4.6</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-size:20px">🥉</span>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">Delina</div>
-            <div style="font-size:11px;color:var(--text-muted)">Parfums de Marly</div>
-          </div>
-          <div style="font-size:14px;font-weight:700;color:var(--text-secondary)">4.5</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="taste-chart">
-      <div class="dna-title" style="margin-bottom:16px">Ваши предпочтения</div>
-      <div class="taste-bar"><span class="taste-label">Цветочные</span><div class="taste-track"><div class="taste-fill" style="width:88%;background:linear-gradient(90deg,var(--accent),#FF6B9D);animation-delay:0.1s"></div></div><span class="taste-val">88%</span></div>
-      <div class="taste-bar"><span class="taste-label">Мускусные</span><div class="taste-track"><div class="taste-fill" style="width:75%;background:linear-gradient(90deg,#9B59B6,#C39BD3);animation-delay:0.2s"></div></div><span class="taste-val">75%</span></div>
-      <div class="taste-bar"><span class="taste-label">Фруктовые</span><div class="taste-track"><div class="taste-fill" style="width:70%;background:linear-gradient(90deg,#F39C12,#F7DC6F);animation-delay:0.3s"></div></div><span class="taste-val">70%</span></div>
-      <div class="taste-bar"><span class="taste-label">Древесные</span><div class="taste-track"><div class="taste-fill" style="width:55%;background:linear-gradient(90deg,#27AE60,#58D68D);animation-delay:0.4s"></div></div><span class="taste-val">55%</span></div>
-      <div class="taste-bar"><span class="taste-label">Восточные</span><div class="taste-track"><div class="taste-fill" style="width:62%;background:linear-gradient(90deg,var(--gold),#F0D78C);animation-delay:0.5s"></div></div><span class="taste-val">62%</span></div>
-      <div class="taste-bar"><span class="taste-label">Свежие</span><div class="taste-track"><div class="taste-fill" style="width:40%;background:linear-gradient(90deg,#3498DB,#85C1E9);animation-delay:0.6s"></div></div><span class="taste-val">40%</span></div>
-      <div class="taste-bar"><span class="taste-label">Пудровые</span><div class="taste-track"><div class="taste-fill" style="width:48%;background:linear-gradient(90deg,#E8DAEF,#D2B4DE);animation-delay:0.7s"></div></div><span class="taste-val">48%</span></div>
-    </div>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ BADGES PAGE ============ -->
-  <div class="page" id="page-badges">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Ачивки</div>
-    </div>
-
-    <div style="text-align:center;padding:20px 0 8px">
-      <div style="font-size:36px;font-weight:800;color:var(--gold)">3 <span style="font-size:16px;color:var(--text-muted);font-weight:400">из 12</span></div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">ачивок получено</div>
-    </div>
-
-    <div class="badges-grid">
-      <div class="badge-item earned animate-scale" style="animation-delay:0.05s">
-        <span class="badge-icon">🎉</span>
-        <div class="badge-name">Первый бокс</div>
-      </div>
-      <div class="badge-item earned animate-scale" style="animation-delay:0.1s">
-        <span class="badge-icon">📝</span>
-        <div class="badge-name">5 отзывов</div>
-      </div>
-      <div class="badge-item earned animate-scale" style="animation-delay:0.15s">
-        <span class="badge-icon">👥</span>
-        <div class="badge-name">Привёл друга</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.2s">
-        <span class="badge-icon">📔</span>
-        <div class="badge-name">10 записей</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.25s">
-        <span class="badge-icon">🔥</span>
-        <div class="badge-name">3 месяца подряд</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.3s">
-        <span class="badge-icon">🧪</span>
-        <div class="badge-name">50 ароматов</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.35s">
-        <span class="badge-icon">⭐</span>
-        <div class="badge-name">20 отзывов</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.4s">
-        <span class="badge-icon">🎁</span>
-        <div class="badge-name">Подарил сертификат</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.45s">
-        <span class="badge-icon">🏅</span>
-        <div class="badge-name">Полгода с нами</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.5s">
-        <span class="badge-icon">💎</span>
-        <div class="badge-name">100 ароматов</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.55s">
-        <span class="badge-icon">🌟</span>
-        <div class="badge-name">5 друзей</div>
-      </div>
-      <div class="badge-item animate-scale" style="animation-delay:0.6s">
-        <span class="badge-icon">👑</span>
-        <div class="badge-name">Гуру парфюмерии</div>
-      </div>
-    </div>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ REFERRAL PAGE ============ -->
-  <div class="page" id="page-referral">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Пригласить друга</div>
-    </div>
-
-    <div class="ref-card animate-up">
-      <div style="font-size:48px;margin-bottom:12px">🎁</div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:8px">Поделитесь ароматами</div>
-      <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">Приглашайте друзей и получайте <strong style="color:var(--accent)">10% скидку</strong> на следующий бокс за каждого приглашённого</div>
-      <div class="ref-link-box">
-        <div class="ref-link">t.me/dararomabox_bot?start=ref_anna2026</div>
-        <button class="ref-copy" onclick="copyRef(this)">Копировать</button>
-      </div>
-      <div class="ref-reward">🏆 Приглашено друзей: <strong>2</strong></div>
-    </div>
-
-    <div class="section-title">Как это работает</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="diary-entry animate-up" style="animation-delay:0.1s">
-        <div style="display:flex;gap:12px;align-items:center">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">1</div>
-          <div style="font-size:13px;line-height:1.4">Отправьте ссылку другу</div>
-        </div>
-      </div>
-      <div class="diary-entry animate-up" style="animation-delay:0.15s">
-        <div style="display:flex;gap:12px;align-items:center">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">2</div>
-          <div style="font-size:13px;line-height:1.4">Друг оформляет подписку</div>
-        </div>
-      </div>
-      <div class="diary-entry animate-up" style="animation-delay:0.2s">
-        <div style="display:flex;gap:12px;align-items:center">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">3</div>
-          <div style="font-size:13px;line-height:1.4">Вы получаете скидку 10% 🎉</div>
-        </div>
-      </div>
-    </div>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ GIFT CARD PAGE ============ -->
-  <div class="page" id="page-gift">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Подарочный сертификат</div>
-    </div>
-
-    <div class="gift-card-preview">
-      <div>
-        <div class="gift-brand">DAR<b>BOX</b></div>
-        <div class="gift-label">подарочный сертификат</div>
-      </div>
-      <div class="gift-amount">3 580 ₽</div>
-    </div>
-
-    <div class="section-title">Номинал</div>
-    <div class="duration-options">
-      <div class="dur-btn" onclick="selectGiftAmount(this, '1 980')">
-        <span class="dur-btn-months" style="font-size:15px">1 980 ₽</span>
-        <span class="dur-btn-discount">3мл × 8</span>
-      </div>
-      <div class="dur-btn" onclick="selectGiftAmount(this, '2 380')">
-        <span class="dur-btn-months" style="font-size:15px">2 380 ₽</span>
-        <span class="dur-btn-discount">6мл × 6</span>
-      </div>
-      <div class="dur-btn selected" onclick="selectGiftAmount(this, '3 580')">
-        <span class="dur-btn-months" style="font-size:15px">3 580 ₽</span>
-        <span class="dur-btn-discount">10мл × 5</span>
-      </div>
-    </div>
-
-    <button class="cta-btn mt-24" onclick="alert('Оформить сертификат')">Подарить сертификат 💌</button>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ QUESTIONNAIRE PAGE ============ -->
-  <div class="page" id="page-questionnaire">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('profile')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Анкета</div>
-    </div>
-
-    <div class="q-progress" id="q-progress"></div>
-    <div id="q-content"></div>
-    <div class="spacer"></div>
-  </div>
-
-  <!-- ============ CHAT PAGE ============ -->
-  <div class="page" id="page-chat">
-    <div class="header">
-      <div class="header-back" onclick="navigateTo('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      </div>
-      <div class="header-title">Чат с парфюмером</div>
-    </div>
-
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-msg admin">Привет! 👋 Я помогу подобрать идеальные ароматы для вашего бокса. Расскажите, что вам нравится?<div class="chat-msg-time">10:24</div></div>
-      <div class="chat-msg user">Хочу что-то сладкое и тёплое на весну<div class="chat-msg-time">10:26</div></div>
-      <div class="chat-msg admin">Отличный выбор! Для тёплой весны рекомендую попробовать направления с ванилью, карамелью и цветочными нотами. Добавлю в ваш следующий бокс 🌸<div class="chat-msg-time">10:28</div></div>
-    </div>
-
-    <div class="chat-input-area">
-      <input class="chat-input" placeholder="Написать сообщение..." id="chat-input">
-      <button class="chat-send" onclick="sendChat()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      </button>
-    </div>
-    <div class="spacer" style="height:120px"></div>
-  </div>
-
-  <!-- ============ BOTTOM NAV ============ -->
-  <nav class="bottom-nav" id="bottom-nav">
-    <div class="nav-item active" onclick="navigateTo('home')" data-page="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>Главная</span>
-    </div>
-    <div class="nav-item" onclick="navigateTo('diary')" data-page="diary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-      <span>Дневник</span>
-    </div>
-    <div class="nav-item" onclick="navigateTo('taste')" data-page="taste">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>
-      <span>Вкус</span>
-    </div>
-    <div class="nav-item" onclick="navigateTo('profile')" data-page="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span>Профиль</span>
-    </div>
-    <div class="nav-item" onclick="navigateTo('chat')" data-page="chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <span>Чат</span>
-    </div>
-  </nav>
-</div>
-
-<script>
-// === TELEGRAM WEBAPP INIT ===
-const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  tg.expand();
-  tg.setHeaderColor('#0A0A0C');
-  tg.setBackgroundColor('#0A0A0C');
-}
-
-// === NAVIGATION ===
-let currentPage = 'home';
-const pageHistory = ['home'];
-
-function navigateTo(page) {
-  const current = document.getElementById('page-' + currentPage);
-  const target = document.getElementById('page-' + page);
-  if (!target) return;
-  
-  current.classList.remove('active');
-  target.classList.add('active');
-  
-  // Update nav
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.page === page);
-  });
-  
-  // Show/hide bottom nav on chat page
-  document.getElementById('bottom-nav').style.display = page === 'chat' ? 'none' : 'flex';
-  
-  // FAB visibility
-  const fab = document.querySelector('.fab');
-  if (fab) fab.style.display = page === 'diary' ? 'flex' : 'none';
-  
-  currentPage = page;
-  window.scrollTo(0, 0);
-  
-  // Init page-specific content
-  if (page === 'profile') initRadar();
-  if (page === 'questionnaire') initQuestionnaire();
-}
-
-// === PLAN SELECTION ===
-const planPrices = [1980, 2380, 3580];
-let selectedPlan = 0;
-let selectedDuration = 0;
-const discounts = [0, 0.05, 0.10];
-const deliveryPrices = [280, 280, 350];
-let selectedDeliveryIdx = 0;
-
-function selectPlan(el, idx) {
-  selectedPlan = idx;
-  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  updateTotal();
-}
-
-function selectDuration(el, idx) {
-  selectedDuration = idx;
-  document.querySelectorAll('.dur-btn').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  updateTotal();
-}
-
-function selectDelivery(el) {
-  const btns = document.querySelectorAll('.delivery-btn');
-  btns.forEach((b, i) => { b.classList.remove('selected'); if (b === el) selectedDeliveryIdx = i; });
-  el.classList.add('selected');
-  updateTotal();
-}
-
-function updateTotal() {
-  const base = planPrices[selectedPlan];
-  const disc = discounts[selectedDuration];
-  const delivery = deliveryPrices[selectedDeliveryIdx];
-  const discounted = Math.round(base * (1 - disc));
-  const total = discounted + delivery;
-  const totalEl = document.querySelector('.cta-total');
-  if (totalEl) {
-    totalEl.innerHTML = `Итого: ${discounted.toLocaleString('ru')} ₽ + доставка ${delivery} ₽ = <strong style="color:var(--accent)">${total.toLocaleString('ru')} ₽</strong>`;
-  }
-}
-
-function selectGiftAmount(el, amount) {
-  document.querySelectorAll('#page-gift .dur-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  document.querySelector('.gift-amount').textContent = amount + ' ₽';
-}
-
-// === RADAR CHART ===
-function initRadar() {
-  const container = document.getElementById('radar-chart');
-  if (!container || container.querySelector('svg')) return;
-  
-  const labels = ['Цветочные', 'Мускусные', 'Фруктовые', 'Древесные', 'Восточные', 'Свежие', 'Пудровые', 'Пряные'];
-  const values = [0.88, 0.75, 0.70, 0.55, 0.62, 0.40, 0.48, 0.35];
-  const n = labels.length;
-  const cx = 150, cy = 150, r = 110;
-  
-  let svg = `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">`;
-  
-  // Grid circles
-  for (let i = 1; i <= 4; i++) {
-    const cr = r * i / 4;
-    svg += `<circle cx="${cx}" cy="${cy}" r="${cr}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
-  }
-  
-  // Axis lines & labels
-  for (let i = 0; i < n; i++) {
-    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-    const x = cx + r * Math.cos(angle);
-    const y = cy + r * Math.sin(angle);
-    svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
-    
-    const lx = cx + (r + 20) * Math.cos(angle);
-    const ly = cy + (r + 20) * Math.sin(angle);
-    svg += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#8A8890" font-size="9" font-family="Manrope,sans-serif">${labels[i]}</text>`;
-  }
-  
-  // Data polygon
-  let points = '';
-  for (let i = 0; i < n; i++) {
-    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-    const x = cx + r * values[i] * Math.cos(angle);
-    const y = cy + r * values[i] * Math.sin(angle);
-    points += `${x},${y} `;
-  }
-  
-  svg += `<polygon points="${points.trim()}" fill="rgba(238,41,112,0.15)" stroke="#EE2970" stroke-width="2"/>`;
-  
-  // Data points
-  for (let i = 0; i < n; i++) {
-    const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-    const x = cx + r * values[i] * Math.cos(angle);
-    const y = cy + r * values[i] * Math.sin(angle);
-    svg += `<circle cx="${x}" cy="${y}" r="4" fill="#EE2970" stroke="#0A0A0C" stroke-width="2"/>`;
-  }
-  
-  svg += `</svg>`;
-  container.innerHTML = svg;
-}
-
-// === QUESTIONNAIRE (20 вопросов — полный ольфакторный портрет) ===
-const questions = [
-  // 1. Пол
-  { q: 'Для кого подбираем ароматы?', type: 'single', opts: [
-    '👩 Для себя (женщина)', '👨 Для себя (мужчина)',
-    '🎁 В подарок женщине', '🎁 В подарок мужчине'
-  ]},
-  // 2. Возраст
-  { q: 'Ваш возраст?', type: 'single', opts: [
-    '18–24', '25–30', '31–40', '41–50', '50+'
-  ]},
-  // 3. Образ жизни
-  { q: 'Какой у вас образ жизни?', type: 'single', opts: [
-    '🏃 Активный / спорт', '💼 Деловой / офис',
-    '🎨 Творческий / свободный', '🏡 Домашний / уютный',
-    '🌍 Путешествия / движение', '🎓 Студент'
-  ]},
-  // 4. Повод
-  { q: 'Для какого повода нужны ароматы?', type: 'multi', hint: 'Можно выбрать несколько', opts: [
-    '☀️ На каждый день', '💼 Для работы / офис',
-    '💑 На свидание', '🌙 Вечерний выход',
-    '🎉 Праздник / событие', '🧘 Для релакса дома',
-    '🏋️ Спорт / активность', '✈️ Путешествие'
-  ]},
-  // 5. Интенсивность
-  { q: 'Какая интенсивность аромата вам ближе?', type: 'single', opts: [
-    '🌬️ Лёгкая — еле уловимая аура', '🌸 Средняя — слышно на расстоянии руки',
-    '💫 Выраженная — заметный шлейф', '🔥 Мощная — аромат входит в комнату раньше вас'
-  ]},
-  // 6. Парфюмерный опыт
-  { q: 'Ваш парфюмерный опыт?', type: 'single', opts: [
-    '🌱 Новичок — только начинаю разбираться',
-    '🌿 Есть несколько любимых ароматов',
-    '🌳 Продвинутый — знаю ноты и бренды',
-    '👑 Эксперт — большая коллекция, слежу за релизами'
-  ]},
-  // 7. ЛЮБИМЫЕ НОТЫ — расширенный мульти-выбор с категориями
-  { q: 'Какие ноты и направления вам нравятся?', type: 'chips', hint: 'Выберите все, что откликается — чем больше, тем точнее подбор',
-    sections: [
-      { label: '🌸 Цветочные', chips: ['Роза', 'Жасмин', 'Пион', 'Тубероза', 'Ирис', 'Ландыш', 'Магнолия', 'Фиалка', 'Нероли', 'Лаванда', 'Флёрдоранж', 'Иланг-иланг'] },
-      { label: '🍑 Фруктовые и ягодные', chips: ['Персик', 'Груша', 'Яблоко', 'Малина', 'Вишня', 'Слива', 'Чёрная смородина', 'Инжир', 'Ананас', 'Манго', 'Цитрусы (общие)', 'Бергамот', 'Грейпфрут', 'Лимон'] },
-      { label: '🌲 Древесные', chips: ['Сандал', 'Кедр', 'Ветивер', 'Пачули', 'Уд (агаровое дерево)', 'Берёза', 'Сосна', 'Кипарис', 'Гваяк', 'Бамбук'] },
-      { label: '🍯 Сладкие и гурманские', chips: ['Ваниль', 'Карамель', 'Шоколад', 'Мёд', 'Миндаль', 'Кокос', 'Тоффи', 'Пралине', 'Кофе', 'Какао'] },
-      { label: '🔥 Пряные и восточные', chips: ['Корица', 'Кардамон', 'Имбирь', 'Шафран', 'Перец (чёрный/розовый)', 'Гвоздика', 'Ладан', 'Мирра', 'Амбра', 'Бензоин'] },
-      { label: '🌿 Свежие и зелёные', chips: ['Мята', 'Зелёный чай', 'Огурец', 'Базилик', 'Лотос', 'Морские ноты', 'Озон', 'Свежескошенная трава', 'Яблочный цвет'] },
-      { label: '🧴 Мускусные и пудровые', chips: ['Белый мускус', 'Пудра', 'Амбретта', 'Кашемировое дерево', 'Замша', 'Чистый хлопок'] },
-      { label: '🖤 Тёмные и дымные', chips: ['Кожа', 'Табак', 'Дым / берёзовый дёготь', 'Ром', 'Виски', 'Опиум', 'Смола'] },
-    ]
-  },
-  // 8. НЕЛЮБИМЫЕ НОТЫ
-  { q: 'А какие ноты вы точно не любите?', type: 'chips', hint: 'Мы исключим их из подбора',
-    sections: [
-      { label: 'Отметьте то, что отталкивает', chips: [
-        'Роза', 'Жасмин', 'Тубероза', 'Ландыш', 'Лаванда',
-        'Ваниль', 'Карамель', 'Шоколад', 'Мёд',
-        'Пачули', 'Уд', 'Ветивер', 'Кедр',
-        'Корица', 'Ладан', 'Мирра', 'Амбра',
-        'Кожа', 'Табак', 'Дым',
-        'Мускус', 'Пудра',
-        'Морские ноты', 'Озон', 'Мята',
-        'Цитрусы', 'Бергамот',
-        'Нет таких — открыт(а) ко всему'
-      ]}
-    ]
-  },
-  // 9. Текущие ароматы
-  { q: 'Какими ароматами вы сейчас пользуетесь?', type: 'text',
-    placeholder: 'Например: Chanel Coco Mademoiselle, Dior Sauvage, что-то от Zara...\n\nЕсли не помните название — опишите характер аромата'
-  },
-  // 10. Любимые ароматы за всю жизнь
-  { q: 'А какие ароматы когда-либо были вашими любимыми?', type: 'text',
-    placeholder: 'Перечислите ароматы, которые вам нравились раньше. Даже если давно — это важно для портрета'
-  },
-  // 11. Сезон
-  { q: 'Для какого сезона подбираем?', type: 'multi', opts: [
-    '🌸 Весна', '☀️ Лето', '🍂 Осень', '❄️ Зима',
-    '🔄 Круглый год — универсальные', '🎨 Хочу разные под каждый сезон'
-  ]},
-  // 12. Время суток
-  { q: 'В какое время суток вы чаще носите парфюм?', type: 'multi', opts: [
-    '🌅 Утро — на работу / учёбу', '☀️ Днём — в течение дня',
-    '🌆 Вечер — выход / свидание', '🌙 Ночь — для себя / сон',
-    '🔄 Весь день — один аромат'
-  ]},
-  // 13. Настроение
-  { q: 'Какое настроение должен создавать аромат?', type: 'chips', hint: 'Выберите всё, что резонирует',
-    sections: [
-      { label: 'Настроение', chips: [
-        '😌 Спокойствие', '⚡ Энергия', '💕 Романтика', '🔥 Страсть / соблазн',
-        '✨ Уверенность', '🌊 Свежесть', '🎭 Загадочность', '🤗 Уют / тепло',
-        '🌸 Нежность', '💪 Сила / мощь', '🎉 Праздник / радость', '🧘 Медитация / гармония',
-        '👑 Роскошь / элегантность', '🌿 Природа / натуральность', '🖤 Дерзость / бунт'
-      ]}
-    ]
-  },
-  // 14. Ассоциации
-  { q: 'С какими образами ассоциируется ваш идеальный аромат?', type: 'chips', hint: 'Выберите близкие образы',
-    sections: [
-      { label: 'Образы и ассоциации', chips: [
-        '🌹 Букет свежих цветов', '☕ Кофейня осенним утром',
-        '🌊 Морской бриз на закате', '📚 Старая библиотека',
-        '🕯️ Свечи и камин', '🍊 Средиземноморский сад',
-        '🏔️ Горный воздух после дождя', '🎭 Вечер в театре',
-        '🌌 Звёздная ночь', '🍰 Французская кондитерская',
-        '🌿 Прогулка в лесу', '💎 Бутик люксовых вещей',
-        '🏜️ Тёплый песок и специи', '🎹 Джаз-бар поздно вечером',
-        '🌺 Тропический остров', '🏰 Старинный замок'
-      ]}
-    ]
-  },
-  // 15. Стойкость
-  { q: 'Какая стойкость для вас идеальна?', type: 'single', opts: [
-    '⏳ 2–4 часа — лёгкий, ненавязчивый', '⏳ 4–6 часов — на полдня',
-    '⏳ 6–8 часов — на весь день', '⏳ 8–12+ часов — чтобы на одежде оставался'
-  ]},
-  // 16. Готовность к экспериментам
-  { q: 'Насколько вы открыты к экспериментам?', type: 'single', opts: [
-    '🔬 Максимально — хочу нишу, авангард, необычное!',
-    '🌿 Умеренно — классика с интересными нюансами',
-    '🛡️ Консервативно — проверенные направления',
-    '🎯 50/50 — половину знакомого, половину нового'
-  ]},
-  // 17. Бюджет восприятия (не цена подписки, а уровень ароматов)
-  { q: 'Какой уровень ароматов вам ближе?', type: 'single', opts: [
-    '🏪 Масс-маркет — Zara, H&M, масс-бренды',
-    '💼 Люкс — Chanel, Dior, Tom Ford, YSL',
-    '🔮 Нишевая парфюмерия — Byredo, Le Labo, Nasomatto',
-    '👑 Высокая парфюмерия — Roja, Xerjoff, Amouage',
-    '🎨 Всё интересно — от масс до ниши'
-  ]},
-  // 18. Гардероб
-  { q: 'Сколько ароматов вы носите обычно?', type: 'single', opts: [
-    '1 — один на все случаи', '2–3 — под настроение',
-    '4–7 — небольшая коллекция', '8+ — много, люблю разнообразие'
-  ]},
-  // 19. Аллергии
-  { q: 'Есть ли аллергии или чувствительность?', type: 'multi', hint: 'Важно для безопасного подбора', opts: [
-    '✅ Нет аллергий', '⚠️ Чувствительная кожа',
-    '⚠️ Аллергия на определённые компоненты', '⚠️ Мигрень от резких запахов',
-    '⚠️ Астма / дыхательная чувствительность'
-  ]},
-  // 20. Цель подписки и пожелания
-  { q: 'Чего вы ждёте от подписки DARBOX?', type: 'text',
-    placeholder: 'Расскажите своими словами:\n— Что хотите получить?\n— Есть ли конкретные ароматы, которые хотите попробовать?\n— Любые пожелания парфюмеру'
-  },
-];
-
-let qStep = 0;
-let qAnswers = [];
-
-function initQuestionnaire() {
-  qStep = 0;
-  qAnswers = [];
-  renderQuestion();
-}
-
-function renderQuestion() {
-  const prog = document.getElementById('q-progress');
-  // Compact progress: show step counter instead of dots for 20 questions
-  prog.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;width:100%">
-      <div style="flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
-        <div style="height:100%;width:${(qStep / questions.length) * 100}%;background:linear-gradient(90deg,var(--accent),#FF6B9D);border-radius:2px;transition:width 0.4s ease"></div>
-      </div>
-      <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;font-weight:600"><span style="color:var(--accent)">${qStep + 1 > questions.length ? questions.length : qStep + 1}</span> / ${questions.length}</div>
-    </div>`;
-  
-  const content = document.getElementById('q-content');
-  if (qStep >= questions.length) {
-    content.innerHTML = `
-      <div style="text-align:center;padding:40px 0">
-        <div style="font-size:60px;margin-bottom:16px;animation:badge-pop 0.5s cubic-bezier(0.22,1,0.36,1) both">✨</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;margin-bottom:8px;animation:fadeUp 0.5s 0.1s both">Ваш портрет готов!</div>
-        <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px;animation:fadeUp 0.5s 0.2s both">20 из 20 вопросов — отличная работа!<br>Мы составили детальный ольфакторный профиль.</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;animation:fadeUp 0.5s 0.3s both">Парфюмер подберёт идеальные ароматы<br>специально для вас 💐</div>
-        <button class="cta-btn" onclick="navigateTo('profile')" style="animation:fadeUp 0.5s 0.4s both">Перейти в профиль</button>
-      </div>`;
-    return;
-  }
-  
-  const q = questions[qStep];
-  let optionsHTML = '';
-  
-  if (q.type === 'chips') {
-    // Chip-style multi-select with sections
-    optionsHTML = `<div class="q-chips-container">`;
-    for (const section of q.sections) {
-      optionsHTML += `<div class="q-section-label">${section.label}</div><div class="q-chips">`;
-      for (const chip of section.chips) {
-        optionsHTML += `<div class="q-chip" onclick="toggleChip(this)">${chip}</div>`;
-      }
-      optionsHTML += `</div>`;
+"""
+🎁 DARBOX v4 — Premium Telegram Aroma Subscription Bot
+DAR Perfum | @dararomabox_bot
+Features: Personal cabinet, perfume diary, rating system,
+taste analytics, referrals, admin panel, chat system
+"""
+import asyncio, sqlite3, json, hashlib, random, string
+from datetime import datetime, timedelta
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
+
+# ═══════════════════════════════════════
+#              CONFIGURATION
+# ═══════════════════════════════════════
+BOT_TOKEN = "8054022324:AAHK2bUZ1lLEDk8FREDbAEl5En040OtEHg0"
+ADMIN_USERNAME = "nasomato"
+ADMIN_CHAT_ID = None
+CONTACT = "@darperf"
+PAYMENT_INFO = ("💳 <b>Реквизиты для оплаты:</b>\n\n"
+    "📱 По номеру телефона:\n<code>+7 963 991 80 48</code>\n"
+    "(Сбербанк / Тинькофф / Альфабанк)\n\n"
+    "После перевода нажмите «✅ Я оплатил».")
+DEL_COST = {"post":280,"cdek":280,"courier":350}
+DEL_NAME = {"post":"📦 Почта России","cdek":"🚚 СДЭК","courier":"🏍 Курьер по Москве"}
+BOXES = {
+    "8x3":{"name":"8 ароматов × 3 мл","short":"8×3мл","price":1980,"em":"🧪","desc":"Максимум открытий"},
+    "6x6":{"name":"6 ароматов × 6 мл","short":"6×6мл","price":2380,"em":"🧴","desc":"Золотая середина"},
+    "5x10":{"name":"5 ароматов × 10 мл","short":"5×10мл","price":3580,"em":"✨","desc":"Полное погружение"},
+}
+DURS = {2:{"d":0,"l":"2 месяца","b":""},4:{"d":5,"l":"4 месяца","b":" (−5%)"},6:{"d":10,"l":"6 месяцев","b":" (−10%) 🔥"}}
+def cprice(bk,m):
+    base=BOXES[bk]["price"];disc=DURS[m]["d"];mo=round(base*(100-disc)/100);return mo,mo*m
+TOTAL_Q = 20
+DIV = "━━━━━━━━━━━━━━━━━━━━"
+div = "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈"
+def pbar(c,t,l=14): f=round(l*c/t);return f"{'█'*f}{'░'*(l-f)}  {c}/{t}"
+def hdr(n,title,em=""): return f"{em} <b>{title}</b>\n\n{pbar(n,TOTAL_Q)}"
+def gen_ref(uid): return hashlib.md5(f"dar{uid}".encode()).hexdigest()[:8]
+
+NM = {
+    "citrus":"🍋 Цитрусовые","floral":"🌹 Цветочные","woody":"🌳 Древесные",
+    "sweet":"🍦 Сладкие/ванильные","fresh":"🌊 Свежие/морские","spicy":"🌶 Пряные/восточные",
+    "leather":"🧥 Кожаные","tobacco":"🚬 Табачные/дымные","coffee":"☕ Кофейные",
+    "fruit":"🍑 Фруктовые","gourmand":"🍫 Гурманские","musk":"🤍 Мускусные",
+    "oud":"🕌 Удовые","amber":"🐳 Амбровые","herbal":"🌿 Травяные",
+    "powder":"💄 Пудровые","aqua":"💧 Акватические","boozy":"🥃 Алкогольные",
+}
+ASSOC_MAP = {"z1":"Лес после дождя","z2":"Морской берег","z3":"Ночной мегаполис","z4":"Восточный базар","z5":"Кондитерская","z6":"Горный воздух","z7":"Старая библиотека","z8":"Цветущий луг","z9":"Тропический остров","z10":"Камин в шале","z11":"Утро в кофейне","z12":"Крыша небоскрёба"}
+
+# ═══════════════════════════════════════
+#              DATABASE
+# ═══════════════════════════════════════
+DB = "darbox_v4.db"
+def init_db():
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS users(
+        user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, created_at TEXT,
+        gender TEXT, gift_gender TEXT, age TEXT, lifestyle TEXT, occasions TEXT,
+        intensity TEXT, experience TEXT, fav_notes TEXT, disliked_notes TEXT,
+        current_perfumes TEXT, season_pref TEXT, time_of_day TEXT, mood TEXT,
+        associations TEXT, longevity TEXT, discovery TEXT, budget TEXT, wardrobe TEXT,
+        allergies TEXT, goal TEXT, extra_wishes TEXT,
+        box_type TEXT, duration_months INTEGER, monthly_price INTEGER, total_price INTEGER,
+        delivery_type TEXT, delivery_cost INTEGER,
+        full_name TEXT, phone TEXT, city TEXT, address TEXT, postal_code TEXT,
+        status TEXT DEFAULT 'new', paid_at TEXT, next_delivery TEXT, months_received INTEGER DEFAULT 0,
+        ref_code TEXT, referred_by TEXT, ref_discount INTEGER DEFAULT 0
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS feedback(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER, month_num INTEGER, aroma_name TEXT,
+        rating_overall INTEGER, rating_longevity INTEGER, rating_sillage INTEGER,
+        comment TEXT, created_at TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS diary(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER, aroma_name TEXT, entry_type TEXT,
+        text TEXT, mood TEXT, occasion TEXT, rating INTEGER,
+        created_at TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER, direction TEXT, text TEXT, created_at TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS box_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER, month_num INTEGER, aromas TEXT,
+        sent_at TEXT, tracking TEXT
+    )""")
+    cn.commit(); cn.close()
+
+def savu(uid, data):
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    fs = list(data.keys()); ph = ",".join(fs); vp = ",".join(["?"]*len(fs))
+    up = ",".join([f"{f}=excluded.{f}" for f in fs])
+    c.execute(f"INSERT INTO users(user_id,{ph}) VALUES(?,{vp}) ON CONFLICT(user_id) DO UPDATE SET {up}",
+              [uid]+[data[f] for f in fs])
+    cn.commit(); cn.close()
+
+def getu(uid):
+    cn = sqlite3.connect(DB); cn.row_factory = sqlite3.Row; c = cn.cursor()
+    c.execute("SELECT * FROM users WHERE user_id=?", (uid,)); r = c.fetchone(); cn.close()
+    return dict(r) if r else None
+
+def get_subs():
+    cn = sqlite3.connect(DB); cn.row_factory = sqlite3.Row; c = cn.cursor()
+    c.execute("SELECT * FROM users WHERE box_type IS NOT NULL ORDER BY created_at DESC")
+    rs = c.fetchall(); cn.close(); return [dict(r) for r in rs]
+
+def get_due(days=7):
+    cn = sqlite3.connect(DB); cn.row_factory = sqlite3.Row; c = cn.cursor()
+    t = (datetime.now()+timedelta(days=days)).strftime("%Y-%m-%d")
+    n = datetime.now().strftime("%Y-%m-%d")
+    c.execute("SELECT * FROM users WHERE status='paid' AND next_delivery<=? AND next_delivery>?", (t, n))
+    rs = c.fetchall(); cn.close(); return [dict(r) for r in rs]
+
+def savfb(uid, mo, ar, ro, rl, rs_, co):
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    c.execute("INSERT INTO feedback(user_id,month_num,aroma_name,rating_overall,rating_longevity,rating_sillage,comment,created_at) VALUES(?,?,?,?,?,?,?,?)",
+              (uid, mo, ar, ro, rl, rs_, co, datetime.now().isoformat()))
+    cn.commit(); cn.close()
+
+def getfb(uid):
+    cn = sqlite3.connect(DB); cn.row_factory = sqlite3.Row; c = cn.cursor()
+    c.execute("SELECT * FROM feedback WHERE user_id=? ORDER BY created_at DESC", (uid,))
+    rs = c.fetchall(); cn.close(); return [dict(r) for r in rs]
+
+def get_taste_stats(uid):
+    """Analyze user's ratings to build taste profile"""
+    fbs = getfb(uid)
+    if not fbs: return None
+    total = len(fbs); avg_overall = sum(f["rating_overall"] for f in fbs) / total
+    avg_long = sum(f["rating_longevity"] or 0 for f in fbs) / total
+    avg_sill = sum(f["rating_sillage"] or 0 for f in fbs) / total
+    top = sorted(fbs, key=lambda x: x["rating_overall"], reverse=True)[:3]
+    bottom = sorted(fbs, key=lambda x: x["rating_overall"])[:3]
+    return {"total": total, "avg_overall": round(avg_overall, 1), "avg_longevity": round(avg_long, 1),
+            "avg_sillage": round(avg_sill, 1), "top": top, "bottom": bottom}
+
+def sav_diary(uid, aroma, entry_type, text, mood="", occasion="", rating=0):
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    c.execute("INSERT INTO diary(user_id,aroma_name,entry_type,text,mood,occasion,rating,created_at) VALUES(?,?,?,?,?,?,?,?)",
+              (uid, aroma, entry_type, text, mood, occasion, rating, datetime.now().isoformat()))
+    cn.commit(); cn.close()
+
+def get_diary(uid, limit=20):
+    cn = sqlite3.connect(DB); cn.row_factory = sqlite3.Row; c = cn.cursor()
+    c.execute("SELECT * FROM diary WHERE user_id=? ORDER BY created_at DESC LIMIT ?", (uid, limit))
+    rs = c.fetchall(); cn.close(); return [dict(r) for r in rs]
+
+def savmsg(uid, d, t):
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    c.execute("INSERT INTO messages(user_id,direction,text,created_at) VALUES(?,?,?,?)",
+              (uid, d, t, datetime.now().isoformat()))
+    cn.commit(); cn.close()
+
+def count_referrals(ref_code):
+    cn = sqlite3.connect(DB); c = cn.cursor()
+    c.execute("SELECT COUNT(*) FROM users WHERE referred_by=? AND status='paid'", (ref_code,))
+    r = c.fetchone()[0]; cn.close(); return r
+
+# ═══════════════════════════════════════
+#              STATES
+# ═══════════════════════════════════════
+class Q(StatesGroup):
+    gender=State();gift_gender=State();age=State();lifestyle=State();occasions=State()
+    intensity=State();experience=State();fav_notes=State();disliked_notes=State()
+    current_perfumes=State();season_pref=State();time_of_day=State();mood=State()
+    associations=State();longevity=State();discovery=State();budget=State()
+    wardrobe=State();allergies=State();goal=State();extra_wishes=State()
+    box_type=State();duration=State()
+    delivery_type=State();full_name=State();phone=State();city=State();address=State();postal_code=State()
+    confirm=State()
+
+class Fb(StatesGroup):
+    month=State();aroma=State();overall=State();longevity=State();sillage=State()
+    comment=State();more=State()
+
+class Diary(StatesGroup):
+    aroma=State();entry=State();mood_tag=State()
+
+class Bcast(StatesGroup):
+    text=State()
+
+class AChat(StatesGroup):
+    chatting=State()
+
+class AddrConfirm(StatesGroup):
+    address=State()
+
+# ═══════════════════════════════════════
+#              HELPERS
+# ═══════════════════════════════════════
+def K(btns, rw=2):
+    rows = []; row = []
+    for t, cb in btns:
+        row.append(InlineKeyboardButton(text=t, callback_data=cb))
+        if len(row) >= rw: rows.append(row); row = []
+    if row: rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def _nkb(pf, sel):
+    btns = []
+    for k, lb in NM.items():
+        ch = " ✓" if lb in sel else ""
+        btns.append((f"{lb}{ch}", f"{pf}_{k}"))
+    if sel: btns.append((f"✅ Готово ({len(sel)})", f"{pf}_done"))
+    else: btns.append(("⏭ Пропустить", f"{pf}_done"))
+    return K(btns, 2)
+
+def main_menu_kb():
+    return K([
+        ("🏠 Главное меню", "menu"),
+    ], 1)
+
+def menu_kb():
+    return K([
+        ("🌸 Оформить подписку", "sq"),
+        ("👤 Мой профиль", "profile"),
+        ("📖 Парфюмерный дневник", "diary_menu"),
+        ("⭐ Мои оценки", "my_ratings"),
+        ("📊 Карта вкуса", "taste_map"),
+        ("💬 Оставить отзыв", "fbs"),
+        ("📋 Моя подписка", "mysub"),
+        ("🎁 Пригласить друга", "referral"),
+        ("✉️ Написать нам", "cmsg"),
+    ], 2)
+
+achat_with = {}
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+dp = Dispatcher(storage=MemoryStorage()); router = Router(); dp.include_router(router)
+
+# ═══════════════════════════════════════
+#           /start & MAIN MENU
+# ═══════════════════════════════════════
+@router.message(Command("start"))
+async def cmd_start(msg: Message, state: FSMContext):
+    await state.clear()
+    # Check referral
+    ref = msg.text.split()[1] if len(msg.text.split()) > 1 else None
+    rc = gen_ref(msg.from_user.id)
+    data = {"username": msg.from_user.username or "", "first_name": msg.from_user.first_name or "",
+            "created_at": datetime.now().isoformat(), "ref_code": rc}
+    if ref and ref != rc:
+        data["referred_by"] = ref
+    savu(msg.from_user.id, data)
+
+    welcome = f"""
+{DIV}
+          🖤  <b>DAR PERFUM</b>
+     Парфюмерная Лаборатория
+{DIV}
+
+🎁 <b>DARBOX — аромабокс по подписке</b>
+
+Каждый месяц — уникальный набор ароматов,
+собранный специально для вас ✨
+
+┊ 🧪  8 × 3 мл  —  <b>1 980 ₽</b>/мес
+┊ 🧴  6 × 6 мл  —  <b>2 380 ₽</b>/мес
+┊ ✨  5 × 10 мл —  <b>3 580 ₽</b>/мес
+
+🔥 <i>4 мес → −5%  ·  6 мес → −10%</i>
+
+{div}
+
+Выберите раздел:"""
+
+    await msg.answer(welcome, reply_markup=menu_kb())
+
+@router.callback_query(F.data == "menu")
+async def show_menu(cb: CallbackQuery, state: FSMContext):
+    await state.clear(); await cb.answer()
+    await cb.message.answer(f"🏠 <b>Главное меню DARBOX</b>\n\n{div}\n\nВыберите раздел:", reply_markup=menu_kb())
+
+# ═══════════════════════════════════════
+#           PERSONAL PROFILE
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "profile")
+async def show_profile(cb: CallbackQuery):
+    await cb.answer()
+    u = getu(cb.from_user.id)
+    if not u:
+        await cb.message.answer("Профиль пока пуст.\nПройдите анкету: /start"); return
+
+    stats = get_taste_stats(cb.from_user.id)
+    diary_count = len(get_diary(cb.from_user.id, 100))
+    refs = count_referrals(u.get("ref_code", ""))
+
+    status_emoji = {"new": "⏳", "pending": "📝", "paid": "✅", "paused": "⏸"}.get(u.get("status", ""), "❓")
+
+    txt = f"""{DIV}
+👤 <b>МОЙ ПРОФИЛЬ</b>
+{DIV}
+
+<b>{u.get('first_name', '')} {u.get('full_name', '')}</b>
+@{u.get('username', '—')}
+
+{div}
+<b>Ольфакторный портрет:</b>
+┊ 👤 {u.get('gender', '—')} · {u.get('age', '—')}
+┊ 🏃 {u.get('lifestyle', '—')} · 🎭 {u.get('occasions', '—')}
+┊ 💨 {u.get('intensity', '—')} · 🎓 {u.get('experience', '—')}
+┊ ❤️ {u.get('fav_notes', '—')}
+┊ 🚫 {u.get('disliked_notes', '—')}
+┊ 🎭 {u.get('mood', '—')} · 🌍 {u.get('associations', '—')}
+┊ 💎 {u.get('budget', '—')} · 👔 {u.get('wardrobe', '—')}
+
+{div}
+<b>Статистика:</b>
+┊ {status_emoji} Статус: {u.get('status', 'нет подписки')}
+┊ 📦 Получено боксов: {u.get('months_received', 0)}
+┊ ⭐ Оценок: {stats['total'] if stats else 0}
+┊ 📖 Записей в дневнике: {diary_count}
+┊ 👥 Рефералов: {refs}
+{DIV}"""
+
+    await cb.message.answer(txt, reply_markup=K([
+        ("📊 Карта вкуса", "taste_map"),
+        ("📖 Дневник", "diary_menu"),
+        ("⭐ Мои оценки", "my_ratings"),
+        ("✏️ Пройти анкету заново", "sq"),
+        ("🏠 Меню", "menu"),
+    ], 2))
+
+# ═══════════════════════════════════════
+#           TASTE MAP (Analytics)
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "taste_map")
+async def taste_map(cb: CallbackQuery):
+    await cb.answer()
+    stats = get_taste_stats(cb.from_user.id)
+    if not stats:
+        await cb.message.answer("📊 <b>Карта вкуса</b>\n\nПока нет данных. Оставьте отзывы после получения бокса!\n\n/feedback — оставить отзыв",
+                                reply_markup=K([("🏠 Меню", "menu")])); return
+
+    # Build visual taste map
+    def bar(val, mx=5, l=10):
+        f = round(l * val / mx); return "▓" * f + "░" * (l - f)
+
+    top_txt = "\n".join([f"  🏆 {t['aroma_name']} — {'⭐'*t['rating_overall']}" for t in stats["top"]])
+    bot_txt = "\n".join([f"  💤 {t['aroma_name']} — {'⭐'*t['rating_overall']}" for t in stats["bottom"]])
+
+    txt = f"""{DIV}
+📊 <b>КАРТА ВКУСА</b>
+{DIV}
+
+Ваш парфюмерный DNA на основе {stats['total']} оценок:
+
+<b>Общее впечатление:</b>
+{bar(stats['avg_overall'])} {stats['avg_overall']}/5
+
+<b>Стойкость:</b>
+{bar(stats['avg_longevity'])} {stats['avg_longevity']}/5
+
+<b>Шлейф:</b>
+{bar(stats['avg_sillage'])} {stats['avg_sillage']}/5
+
+{div}
+<b>Топ-3 ваших фаворита:</b>
+{top_txt}
+
+<b>Не зашли:</b>
+{bot_txt}
+
+{div}
+<i>Чем больше оценок — тем точнее подбор!</i>
+{DIV}"""
+    await cb.message.answer(txt, reply_markup=K([("⭐ Оценить ароматы", "fbs"), ("🏠 Меню", "menu")]))
+
+# ═══════════════════════════════════════
+#           MY RATINGS
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "my_ratings")
+async def my_ratings(cb: CallbackQuery):
+    await cb.answer()
+    fbs = getfb(cb.from_user.id)
+    if not fbs:
+        await cb.message.answer("⭐ <b>Мои оценки</b>\n\nПока пусто. После получения бокса нажмите «Оставить отзыв»!",
+                                reply_markup=K([("💬 Оставить отзыв", "fbs"), ("🏠 Меню", "menu")])); return
+
+    lines = []
+    for f in fbs[:15]:
+        stars = "⭐" * f["rating_overall"]
+        lines.append(f"🧴 <b>{f['aroma_name']}</b> — {stars}\n"
+                     f"   ⏱{f.get('rating_longevity',0) or '—'}/5 · 💨{f.get('rating_sillage',0) or '—'}/5"
+                     f"{' · 💬 '+f['comment'] if f['comment'] and f['comment']!='—' else ''}")
+
+    await cb.message.answer(
+        f"⭐ <b>Мои оценки</b> ({len(fbs)} всего)\n\n" + "\n\n".join(lines),
+        reply_markup=K([("💬 Оценить ещё", "fbs"), ("📊 Карта вкуса", "taste_map"), ("🏠 Меню", "menu")]))
+
+# ═══════════════════════════════════════
+#           PERFUME DIARY
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "diary_menu")
+async def diary_menu(cb: CallbackQuery):
+    await cb.answer()
+    entries = get_diary(cb.from_user.id, 10)
+    txt = f"📖 <b>Парфюмерный дневник</b>\n\n"
+    if entries:
+        txt += f"Последние записи ({len(entries)}):\n\n"
+        for e in entries[:5]:
+            date = e["created_at"][:10]
+            txt += f"┊ {date} · <b>{e['aroma_name']}</b>\n┊ <i>{e['text'][:80]}{'...' if len(e['text'])>80 else ''}</i>\n\n"
+    else:
+        txt += "<i>Пока пусто. Напишите о любом аромате — сохраним для вас!</i>\n\n"
+
+    txt += f"{div}\n<i>Записывайте впечатления — мы учтём их при подборе!</i>"
+    await cb.message.answer(txt, reply_markup=K([
+        ("✏️ Новая запись", "diary_new"),
+        ("📖 Все записи", "diary_all"),
+        ("🏠 Меню", "menu"),
+    ], 2))
+
+@router.callback_query(F.data == "diary_new")
+async def diary_new(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
+    await cb.message.answer("📖 <b>Новая запись в дневнике</b>\n\n🧴 Напишите название аромата:")
+    await state.set_state(Diary.aroma)
+
+@router.message(Diary.aroma)
+async def diary_aroma(msg: Message, state: FSMContext):
+    await state.update_data(d_aroma=msg.text.strip())
+    await msg.answer(
+        f"✏️ <b>{msg.text.strip()}</b>\n\n"
+        "Напишите ваши впечатления, мысли, ассоциации:\n\n"
+        "<i>Например: «Носил на свидание — комплименты!\n"
+        "Держится 6 часов. Чувствую ваниль и кожу.\n"
+        "Идеален на осень»</i>"
+    )
+    await state.set_state(Diary.entry)
+
+@router.message(Diary.entry)
+async def diary_entry(msg: Message, state: FSMContext):
+    await state.update_data(d_entry=msg.text.strip())
+    await msg.answer("🎭 Настроение при ношении?", reply_markup=K([
+        ("❤️ Романтика", "dm_rom"), ("💪 Уверенность", "dm_pow"),
+        ("🧘 Спокойствие", "dm_calm"), ("⚡ Энергия", "dm_ene"),
+        ("🔮 Загадочность", "dm_mys"), ("⏭ Пропустить", "dm_skip"),
+    ], 2))
+    await state.set_state(Diary.mood_tag)
+
+@router.callback_query(Diary.mood_tag, F.data.startswith("dm_"))
+async def diary_mood(cb: CallbackQuery, state: FSMContext):
+    moods = {"dm_rom": "Романтика", "dm_pow": "Уверенность", "dm_calm": "Спокойствие",
+             "dm_ene": "Энергия", "dm_mys": "Загадочность", "dm_skip": "—"}
+    m = moods.get(cb.data, "—")
+    d = await state.get_data()
+    sav_diary(cb.from_user.id, d["d_aroma"], "impression", d["d_entry"], m)
+    await cb.answer("✅")
+    await cb.message.edit_text(
+        f"✅ <b>Запись сохранена!</b>\n\n"
+        f"🧴 {d['d_aroma']}\n"
+        f"🎭 {m}\n"
+        f"📝 {d['d_entry'][:100]}{'...' if len(d['d_entry'])>100 else ''}\n\n"
+        f"<i>Мы учтём это при подборе ваших ароматов</i> 🖤",
+        reply_markup=K([("📖 Ещё запись", "diary_new"), ("🏠 Меню", "menu")]))
+    await state.clear()
+
+    # Notify admin
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID,
+            f"📖 Дневник @{cb.from_user.username or '?'}: {d['d_aroma']}\n{d['d_entry'][:200]}")
+        except: pass
+
+@router.callback_query(F.data == "diary_all")
+async def diary_all(cb: CallbackQuery):
+    await cb.answer()
+    entries = get_diary(cb.from_user.id, 20)
+    if not entries:
+        await cb.message.answer("📖 Дневник пуст.", reply_markup=K([("✏️ Новая запись", "diary_new"), ("🏠 Меню", "menu")])); return
+    lines = []
+    for e in entries:
+        date = e["created_at"][:10]
+        mood = f" · 🎭{e['mood']}" if e.get("mood") and e["mood"] != "—" else ""
+        lines.append(f"<b>{date}</b> · 🧴 {e['aroma_name']}{mood}\n<i>{e['text'][:100]}</i>")
+    await cb.message.answer(f"📖 <b>Все записи</b> ({len(entries)})\n\n" + "\n\n".join(lines),
+                            reply_markup=K([("✏️ Новая запись", "diary_new"), ("🏠 Меню", "menu")]))
+
+# ═══════════════════════════════════════
+#           REFERRAL SYSTEM
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "referral")
+async def referral(cb: CallbackQuery):
+    await cb.answer()
+    u = getu(cb.from_user.id)
+    rc = u.get("ref_code", gen_ref(cb.from_user.id))
+    refs = count_referrals(rc)
+    link = f"https://t.me/dararomabox_bot?start={rc}"
+
+    await cb.message.answer(
+        f"🎁 <b>Пригласите друга</b>\n\n"
+        f"За каждого друга, который оформит подписку,\n"
+        f"вы получите <b>скидку 10%</b> на следующий бокс!\n\n"
+        f"{div}\n\n"
+        f"🔗 Ваша ссылка:\n<code>{link}</code>\n\n"
+        f"👥 Приглашено: <b>{refs}</b>\n"
+        f"💰 Накоплено скидок: <b>{refs * 10}%</b>\n\n"
+        f"{div}\n"
+        f"<i>Поделитесь ссылкой с друзьями!</i>",
+        reply_markup=K([("🏠 Меню", "menu")]))
+
+# ═══════════════════════════════════════
+#           QUESTIONNAIRE (20 Q)
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "sq")
+async def sq(cb: CallbackQuery, state: FSMContext):
+    await cb.answer()
+    await cb.message.answer(
+        f"🌿 <b>Парфюмерная анкета</b>\n\n"
+        f"20 вопросов · 3-5 минут\n\n"
+        f"Мы составим ваш <b>ольфакторный портрет</b> ✨\n\n"
+        f"<i>Каждый ответ → ближе к идеальному аромату</i>")
+    await asyncio.sleep(0.8)
+    await cb.message.answer(hdr(1,"Для кого подбираем?","👤")+"\n\n<i>Определим направление</i>",
+        reply_markup=K([("🙋‍♂️ Для себя (М)","g_m"),("🙋‍♀️ Для себя (Ж)","g_f"),("🎁 В подарок","g_gift")],2))
+    await state.set_state(Q.gender)
+
+# Q1
+@router.callback_query(Q.gender, F.data.startswith("g_"))
+async def q1(cb: CallbackQuery, state: FSMContext):
+    v = {"g_m":"Мужчина","g_f":"Женщина","g_gift":"В подарок"}[cb.data]
+    await state.update_data(gender=v); await cb.answer(f"✓ {v}")
+    if cb.data == "g_gift":
+        await cb.message.edit_text(hdr(1,"Кому дарим?","🎁"),
+            reply_markup=K([("🙋‍♂️ Мужчине","gf_m"),("🙋‍♀️ Женщине","gf_f"),("← Назад","bk0")]))
+        await state.set_state(Q.gift_gender); return
+    await state.update_data(gift_gender="—"); await _q2(cb, state)
+
+@router.callback_query(Q.gift_gender, F.data.startswith("gf_"))
+async def q1b(cb: CallbackQuery, state: FSMContext):
+    v = {"gf_m":"Мужчине","gf_f":"Женщине"}[cb.data]
+    await state.update_data(gift_gender=v); await cb.answer(f"✓ {v}"); await _q2(cb, state)
+
+async def _q2(cb, state):
+    await cb.message.edit_text(hdr(2,"Возраст","📅"),
+        reply_markup=K([("18-24","a1"),("25-34","a2"),("35-44","a3"),("45+","a4"),("← Назад","bk1")]))
+    await state.set_state(Q.age)
+
+@router.callback_query(Q.age, F.data.startswith("a"))
+async def q2(cb: CallbackQuery, state: FSMContext):
+    v = {"a1":"18-24","a2":"25-34","a3":"35-44","a4":"45+"}[cb.data]
+    await state.update_data(age=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(3,"Образ жизни","🏃")+"\n\n<i>Ваш ритм → характер аромата</i>",
+        reply_markup=K([("💼 Деловой","l1"),("🎨 Творческий","l2"),("🏋️ Активный","l3"),("🌙 Размеренный","l4"),("← Назад","bk2")],1))
+    await state.set_state(Q.lifestyle)
+
+@router.callback_query(Q.lifestyle, F.data.startswith("l"))
+async def q3(cb: CallbackQuery, state: FSMContext):
+    v = {"l1":"Деловой","l2":"Творческий","l3":"Активный","l4":"Размеренный"}[cb.data]
+    await state.update_data(lifestyle=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(4,"Где носите?","🎭"),
+        reply_markup=K([("📆 Каждый день","o1"),("🌃 На выход","o2"),("🏢 На работу","o3"),("🔀 По-разному","o4"),("← Назад","bk3")],1))
+    await state.set_state(Q.occasions)
+
+@router.callback_query(Q.occasions, F.data.startswith("o"))
+async def q4(cb: CallbackQuery, state: FSMContext):
+    v = {"o1":"Каждый день","o2":"На выход","o3":"На работу","o4":"По-разному"}[cb.data]
+    await state.update_data(occasions=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(5,"Интенсивность","💨"),
+        reply_markup=K([("🌬 Шёпот","i1"),("☁️ Умеренный","i2"),("🔥 Мощный шлейф","i3"),("🎲 По настроению","i4"),("← Назад","bk4")],1))
+    await state.set_state(Q.intensity)
+
+@router.callback_query(Q.intensity, F.data.startswith("i"))
+async def q5(cb: CallbackQuery, state: FSMContext):
+    v = {"i1":"Лёгкие","i2":"Умеренные","i3":"Мощные","i4":"По настроению"}[cb.data]
+    await state.update_data(intensity=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(6,"Парфюмерный опыт","🎓"),
+        reply_markup=K([("🌱 Новичок","e1"),("🌿 Любитель","e2"),("🌳 Энтузиаст","e3"),("👑 Гуру","e4"),("← Назад","bk5")],1))
+    await state.set_state(Q.experience)
+
+@router.callback_query(Q.experience, F.data.startswith("e"))
+async def q6(cb: CallbackQuery, state: FSMContext):
+    v = {"e1":"Новичок","e2":"Любитель","e3":"Энтузиаст","e4":"Гуру"}[cb.data]
+    await state.update_data(experience=v); await cb.answer(f"✓ {v}")
+    await state.update_data(_fav=[])
+    await cb.message.edit_text(hdr(7,"Любимые ноты ❤️","🌸")+"\n\n<i>Выберите всё что нравится</i>",reply_markup=_nkb("f",[]))
+    await state.set_state(Q.fav_notes)
+
+@router.callback_query(Q.fav_notes, F.data.startswith("f_"))
+async def q7(cb: CallbackQuery, state: FSMContext):
+    d = await state.get_data(); fav = d.get("_fav", [])
+    k = cb.data[2:]
+    if k == "done":
+        await state.update_data(fav_notes=", ".join(fav) if fav else "Не выбрано", _dis=[])
+        await cb.answer()
+        await cb.message.edit_text(hdr(8,"Нелюбимые ноты 🚫","❌")+"\n\n<i>Что НЕ должно быть?</i>",reply_markup=_nkb("d",[]))
+        await state.set_state(Q.disliked_notes); return
+    lb = NM.get(k, k)
+    if lb in fav: fav.remove(lb)
+    else: fav.append(lb)
+    await state.update_data(_fav=fav); await cb.answer(f"{'✓' if lb in fav else '✗'} {lb}")
+    await cb.message.edit_reply_markup(reply_markup=_nkb("f", fav))
+
+@router.callback_query(Q.disliked_notes, F.data.startswith("d_"))
+async def q8(cb: CallbackQuery, state: FSMContext):
+    d = await state.get_data(); dis = d.get("_dis", [])
+    k = cb.data[2:]
+    if k == "done":
+        await state.update_data(disliked_notes=", ".join(dis) if dis else "Нет")
+        await cb.answer()
+        await cb.message.edit_text(hdr(9,"Ваши ароматы","👃")+"\n\n<i>Что носите сейчас?\nНапишите или «нет».</i>")
+        await state.set_state(Q.current_perfumes); return
+    lb = NM.get(k, k)
+    if lb in dis: dis.remove(lb)
+    else: dis.append(lb)
+    await state.update_data(_dis=dis); await cb.answer()
+    await cb.message.edit_reply_markup(reply_markup=_nkb("d", dis))
+
+@router.message(Q.current_perfumes)
+async def q9(msg: Message, state: FSMContext):
+    await state.update_data(current_perfumes=msg.text.strip())
+    await msg.answer(hdr(10,"Сезон","🌤"),
+        reply_markup=K([("🌸 Весна","s1"),("☀️ Лето","s2"),("🍂 Осень","s3"),("❄️ Зима","s4"),("🔄 Все","s5"),("← Назад","bk9")],2))
+    await state.set_state(Q.season_pref)
+
+@router.callback_query(Q.season_pref, F.data.startswith("s"))
+async def q10(cb: CallbackQuery, state: FSMContext):
+    v = {"s1":"Весна","s2":"Лето","s3":"Осень","s4":"Зима","s5":"Все"}[cb.data]
+    await state.update_data(season_pref=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(11,"Время суток","🕐"),
+        reply_markup=K([("🌅 День","t1"),("🌙 Вечер","t2"),("🔄 Универсально","t3"),("← Назад","bk10")],1))
+    await state.set_state(Q.time_of_day)
+
+@router.callback_query(Q.time_of_day, F.data.startswith("t"))
+async def q11(cb: CallbackQuery, state: FSMContext):
+    v = {"t1":"День","t2":"Вечер","t3":"Универсально"}[cb.data]
+    await state.update_data(time_of_day=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(12,"Настроение","🎭")+"\n\n<i>Какую эмоцию хотите?</i>",
+        reply_markup=K([("❤️ Романтика","m1"),("💪 Уверенность","m2"),("🧘 Спокойствие","m3"),("⚡ Энергия","m4"),("🔮 Загадочность","m5"),("😏 Соблазн","m6"),("← Назад","bk11")],2))
+    await state.set_state(Q.mood)
+
+@router.callback_query(Q.mood, F.data.startswith("m"))
+async def q12(cb: CallbackQuery, state: FSMContext):
+    v = {"m1":"Романтика","m2":"Уверенность","m3":"Спокойствие","m4":"Энергия","m5":"Загадочность","m6":"Соблазн"}[cb.data]
+    await state.update_data(mood=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(13,"Ассоциации","🌍")+"\n\n<i>Закройте глаза... Где вы счастливы?</i>",
+        reply_markup=K([("🌲 Лес","z1"),("🌊 Море","z2"),("🏙 Город","z3"),("🕌 Восток","z4"),("🍰 Кондитерская","z5"),("🏔 Горы","z6"),("📚 Библиотека","z7"),("🌾 Луг","z8"),("🏖 Тропики","z9"),("🪵 Камин","z10"),("☕ Кофейня","z11"),("🌃 Крыша","z12"),("← Назад","bk12")],3))
+    await state.set_state(Q.associations)
+
+@router.callback_query(Q.associations, F.data.startswith("z"))
+async def q13(cb: CallbackQuery, state: FSMContext):
+    v = ASSOC_MAP.get(cb.data, "?")
+    await state.update_data(associations=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(14,"Стойкость","⏱"),
+        reply_markup=K([("🕐 2-4ч","r1"),("🕕 6-8ч","r2"),("🕛 12+ч","r3"),("← Назад","bk13")],1))
+    await state.set_state(Q.longevity)
+
+@router.callback_query(Q.longevity, F.data.startswith("r"))
+async def q14(cb: CallbackQuery, state: FSMContext):
+    v = {"r1":"2-4ч","r2":"6-8ч","r3":"12+ч"}[cb.data]
+    await state.update_data(longevity=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(15,"Эксперименты","🚀"),
+        reply_markup=K([("🚀 Удивляйте!","x1"),("😌 Классику","x2"),("⚖️ 50/50","x3"),("← Назад","bk14")],1))
+    await state.set_state(Q.discovery)
+
+@router.callback_query(Q.discovery, F.data.startswith("x"))
+async def q15(cb: CallbackQuery, state: FSMContext):
+    v = {"x1":"Эксперименты","x2":"Классика","x3":"50/50"}[cb.data]
+    await state.update_data(discovery=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(16,"Ценовой сегмент","💎"),
+        reply_markup=K([("🛒 Масс","b1"),("⭐ Средний","b2"),("💫 Ниша","b3"),("👑 Люкс","b4"),("🎲 Все","b5"),("← Назад","bk15")],2))
+    await state.set_state(Q.budget)
+
+@router.callback_query(Q.budget, F.data.startswith("b"))
+async def q16(cb: CallbackQuery, state: FSMContext):
+    v = {"b1":"Масс","b2":"Средний","b3":"Ниша","b4":"Люкс","b5":"Все"}[cb.data]
+    await state.update_data(budget=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(17,"Гардероб","👔"),
+        reply_markup=K([("👕 Casual","w1"),("👔 Классика","w2"),("🧢 Street","w3"),("👗 Элегантный","w4"),("🎨 Эклектика","w5"),("← Назад","bk16")],2))
+    await state.set_state(Q.wardrobe)
+
+@router.callback_query(Q.wardrobe, F.data.startswith("w"))
+async def q17(cb: CallbackQuery, state: FSMContext):
+    v = {"w1":"Casual","w2":"Классика","w3":"Street","w4":"Элегантный","w5":"Эклектика"}[cb.data]
+    await state.update_data(wardrobe=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(18,"Аллергии","⚠️")+"\n\n<i>Напишите или нажмите «Нет»</i>",
+        reply_markup=K([("✅ Нет","al0"),("← Назад","bk17")]))
+    await state.set_state(Q.allergies)
+
+@router.callback_query(Q.allergies, F.data == "al0")
+async def q18a(cb: CallbackQuery, state: FSMContext):
+    await state.update_data(allergies="Нет"); await cb.answer(); await _q19(cb.message, state)
+@router.message(Q.allergies)
+async def q18b(msg: Message, state: FSMContext):
+    await state.update_data(allergies=msg.text.strip()); await _q19(msg, state)
+
+async def _q19(msg, state):
+    await msg.answer(hdr(19,"Цель","🎯"),
+        reply_markup=K([("🔍 Найти свой","g1"),("🌍 Новое","g2"),("📚 Коллекция","g3"),("🎁 Подарок","g4"),("← Назад","bk18")],1))
+    await state.set_state(Q.goal)
+
+@router.callback_query(Q.goal, F.data.startswith("g"))
+async def q19(cb: CallbackQuery, state: FSMContext):
+    v = {"g1":"Найти свой","g2":"Новое","g3":"Коллекция","g4":"Подарок"}[cb.data]
+    await state.update_data(goal=v); await cb.answer(f"✓ {v}")
+    await cb.message.edit_text(hdr(20,"Пожелания","💬")+"\n\n<i>Любые мысли. Или «Пропустить».</i>",
+        reply_markup=K([("⏭ Пропустить","ew0"),("← Назад","bk19")]))
+    await state.set_state(Q.extra_wishes)
+
+@router.callback_query(Q.extra_wishes, F.data == "ew0")
+async def q20a(cb: CallbackQuery, state: FSMContext):
+    await state.update_data(extra_wishes="—"); await cb.answer(); await _box(cb.message, state)
+@router.message(Q.extra_wishes)
+async def q20b(msg: Message, state: FSMContext):
+    await state.update_data(extra_wishes=msg.text.strip()); await _box(msg, state)
+
+# ═══════════════════════════════════════
+#       BOX, DURATION, DELIVERY, CONFIRM
+# ═══════════════════════════════════════
+async def _box(msg, state):
+    txt = f"🎉 <b>Анкета завершена!</b>\n\n{pbar(TOTAL_Q,TOTAL_Q)}\n\nВыберите формат:\n\n"
+    for bk, b in BOXES.items(): txt += f"{b['em']} <b>{b['name']}</b>\n<i>{b['desc']}</i> · <b>{b['price']:,} ₽</b>/мес\n\n"
+    await msg.answer(txt, reply_markup=K([("🧪 8×3мл","bx_8x3"),("🧴 6×6мл","bx_6x6"),("✨ 5×10мл","bx_5x10"),("← Назад","bk20")],1))
+    await state.set_state(Q.box_type)
+
+@router.callback_query(Q.box_type, F.data.startswith("bx_"))
+async def pickbox(cb: CallbackQuery, state: FSMContext):
+    bk = cb.data[3:]; await state.update_data(box_type=bk); await cb.answer()
+    bx = BOXES[bk]
+    lines = [f"▸ <b>{DURS[m]['l']}{DURS[m]['b']}</b>\n   {cprice(bk,m)[0]:,} ₽/мес → <b>{cprice(bk,m)[1]:,} ₽</b>" for m in DURS]
+    await cb.message.edit_text(f"⏳ <b>Срок</b> · {bx['em']} {bx['name']}\n\n"+"\n\n".join(lines),
+        reply_markup=K([("2 мес","du2"),("4 мес (−5%)","du4"),("6 мес (−10%) 🔥","du6"),("← Назад","bkbox")],1))
+    await state.set_state(Q.duration)
+
+@router.callback_query(Q.duration, F.data.startswith("du"))
+async def pickdur(cb: CallbackQuery, state: FSMContext):
+    m = int(cb.data[2:]); d = await state.get_data(); mo, tot = cprice(d["box_type"], m)
+    await state.update_data(duration_months=m, monthly_price=mo, total_price=tot); await cb.answer()
+    await cb.message.edit_text("🚚 <b>Доставка</b>",
+        reply_markup=K([("📦 Почта — 280₽","dl_post"),("🚚 СДЭК — 280₽","dl_cdek"),("🏍 Курьер Мск — 350₽","dl_courier"),("← Назад","bkdur")],1))
+    await state.set_state(Q.delivery_type)
+
+@router.callback_query(Q.delivery_type, F.data.startswith("dl_"))
+async def pickdel(cb: CallbackQuery, state: FSMContext):
+    dt = cb.data[3:]; dc = DEL_COST[dt]
+    await state.update_data(delivery_type=dt, delivery_cost=dc); await cb.answer()
+    await cb.message.edit_text("👤 <b>ФИО получателя</b>\n\nНапишите <b>Фамилию Имя Отчество</b> полностью:\n\n<i>Например: Иванов Иван Иванович</i>")
+    await state.set_state(Q.full_name)
+
+@router.message(Q.full_name)
+async def fn(msg: Message, state: FSMContext):
+    await state.update_data(full_name=msg.text.strip()); await msg.answer("📱 <b>Телефон:</b>"); await state.set_state(Q.phone)
+@router.message(Q.phone)
+async def ph(msg: Message, state: FSMContext):
+    await state.update_data(phone=msg.text.strip()); await msg.answer("🏙 <b>Город:</b>"); await state.set_state(Q.city)
+@router.message(Q.city)
+async def ct(msg: Message, state: FSMContext):
+    await state.update_data(city=msg.text.strip())
+    d = await state.get_data(); dt = d.get("delivery_type", "post")
+    if dt == "cdek": await msg.answer("📍 <b>Полный адрес отделения СДЭК</b>\n\n<i>Например: г. Москва, ул. Тверская, д. 5, отд. СДЭК №123</i>")
+    elif dt == "courier": await msg.answer("🏠 <b>Адрес</b> (внутри МКАД):")
+    else: await msg.answer("🏠 <b>Адрес</b> (улица, дом, кв):")
+    await state.set_state(Q.address)
+@router.message(Q.address)
+async def ad(msg: Message, state: FSMContext):
+    await state.update_data(address=msg.text.strip())
+    d = await state.get_data()
+    if d.get("delivery_type") == "post":
+        await msg.answer("📮 <b>Индекс:</b>"); await state.set_state(Q.postal_code)
+    else: await state.update_data(postal_code="—"); await _summary(msg, state)
+@router.message(Q.postal_code)
+async def pc(msg: Message, state: FSMContext):
+    await state.update_data(postal_code=msg.text.strip()); await _summary(msg, state)
+
+async def _summary(msg, state):
+    d = await state.get_data(); bx = BOXES[d["box_type"]]; du = DURS[d["duration_months"]]
+    mo, tot = cprice(d["box_type"], d["duration_months"]); dc = d.get("delivery_cost", 0); grand = tot + dc
+    dln = DEL_NAME.get(d.get("delivery_type", "post"), "?")
+
+    txt = f"""{DIV}
+📋 <b>ЗАЯВКА</b>
+{DIV}
+<b>Подписка:</b> {bx['em']} {bx['name']}
+⏳ {du['l']}{du['b']} · {mo:,}₽/мес
+{dln} · {dc}₽
+<b>💳 ИТОГО: {grand:,} ₽</b>
+
+<b>Доставка:</b>
+👤 {d.get('full_name','—')} · 📱 {d.get('phone','—')}
+🏙 {d.get('city','—')} · 🏠 {d.get('address','—')}
+{DIV}"""
+    await msg.answer(txt+"\n<b>Всё верно?</b>",reply_markup=K([("✅ Подтвердить","cf1"),("✏️ Заново","cf0")],1))
+    await state.set_state(Q.confirm)
+
+@router.callback_query(Q.confirm, F.data == "cf1")
+async def cfyes(cb: CallbackQuery, state: FSMContext):
+    d = await state.get_data(); await cb.answer("✅")
+    savu(cb.from_user.id, {
+        "username":cb.from_user.username or "","first_name":cb.from_user.first_name or "",
+        **{k:d.get(k,"") for k in ["gender","gift_gender","age","lifestyle","occasions","intensity","experience",
+        "fav_notes","disliked_notes","current_perfumes","season_pref","time_of_day","mood","associations",
+        "longevity","discovery","budget","wardrobe","allergies","goal","extra_wishes",
+        "box_type","full_name","phone","city","address","postal_code","delivery_type"]},
+        "duration_months":d.get("duration_months",0),"monthly_price":d.get("monthly_price",0),
+        "total_price":d.get("total_price",0),"delivery_cost":d.get("delivery_cost",0),"status":"pending",
+    })
+    bx = BOXES[d["box_type"]]; mo, tot = cprice(d["box_type"], d["duration_months"])
+    dc = d.get("delivery_cost", 0); grand = tot + dc
+
+    await cb.message.edit_text(f"🎉 <b>Заявка оформлена!</b>\n\n💬 {CONTACT} — если есть вопросы\nСпасибо за <b>DARBOX</b>! 🖤")
+    await asyncio.sleep(1)
+    await cb.message.answer(f"💰 <b>Оплата: {grand:,} ₽</b>\n\n{PAYMENT_INFO}",
+        reply_markup=K([("✅ Я оплатил(а)","pd"),("💬 Написать нам","cmsg")],1))
+
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID,
+            f"🆕 <b>ЗАЯВКА!</b> @{cb.from_user.username or '?'} <code>{cb.from_user.id}</code>\n"
+            f"📦 {bx['name']}×{d['duration_months']}мес · 💰{grand:,}₽\n"
+            f"❤️ {d.get('fav_notes','—')}\n🚫 {d.get('disliked_notes','—')}\n👃 {d.get('current_perfumes','—')}\n"
+            f"🎭 {d.get('mood','—')} · 🌍 {d.get('associations','—')}\n📱 {d.get('phone','—')}",
+            reply_markup=K([(f"💬","ac_{cb.from_user.id}"),(f"✅ Оплата","ap_{cb.from_user.id}"),(f"👤","apr_{cb.from_user.id}")]))
+        except: pass
+    await state.clear()
+
+@router.callback_query(Q.confirm, F.data == "cf0")
+async def cfno(cb: CallbackQuery, state: FSMContext):
+    await state.clear(); await cb.answer()
+    await cb.message.edit_text("🔄 Заново..."); await cmd_start(cb.message, state)
+
+# ═══════════════════════════════════════
+#           PAYMENT & STATUS
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "pd")
+async def paydone(cb: CallbackQuery):
+    await cb.answer("✅")
+    await cb.message.edit_text("⏳ Проверяем оплату... До 30 мин 🖤",reply_markup=K([("💬 Написать","cmsg"),("🏠 Меню","menu")]))
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        u = getu(cb.from_user.id)
+        try: await bot.send_message(ADMIN_CHAT_ID,f"💳 Оплата! @{cb.from_user.username or '?'} <code>{cb.from_user.id}</code> {u.get('total_price',0)+u.get('delivery_cost',0):,}₽",
+            reply_markup=K([(f"✅ OK","ap_{cb.from_user.id}"),(f"💬","ac_{cb.from_user.id}")]))
+        except: pass
+
+@router.callback_query(F.data.startswith("ap_"))
+async def adminpay(cb: CallbackQuery):
+    if cb.from_user.username != ADMIN_USERNAME: await cb.answer("⛔"); return
+    uid = int(cb.data[3:]); now = datetime.now()
+    nd = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+    savu(uid, {"status":"paid","paid_at":now.isoformat(),"next_delivery":nd,"months_received":0})
+    await cb.answer("✅"); await cb.message.edit_text(cb.message.text + f"\n\n✅ ОПЛАТА OK · {now.strftime('%d.%m.%Y')}")
+    try: await bot.send_message(uid,"🎉 <b>Подписка активна!</b>\n\nМы собираем ваш аромабокс 🖤",reply_markup=K([("🏠 Меню","menu")]))
+    except: pass
+
+# ═══════════════════════════════════════
+#           ENHANCED FEEDBACK (3 ratings)
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "fbs")
+async def fbs(cb: CallbackQuery, state: FSMContext):
+    await cb.answer(); await state.clear()
+    await cb.message.answer("⭐ <b>Оценка аромата</b>\n\nКакой месяц?",reply_markup=K([(f"{i}-й","fb_{i}") for i in range(1,7)]+[("🏠 Меню","menu")]))
+    await state.set_state(Fb.month)
+
+@router.message(Command("feedback"))
+async def fbcmd(msg: Message, state: FSMContext):
+    await state.clear()
+    await msg.answer("⭐ <b>Оценка</b>\n\nМесяц?",reply_markup=K([(f"{i}-й","fb_{i}") for i in range(1,7)]))
+    await state.set_state(Fb.month)
+
+@router.callback_query(Fb.month, F.data.startswith("fb_"))
+async def fbm(cb: CallbackQuery, state: FSMContext):
+    m = int(cb.data[3:]); await state.update_data(fm=m); await cb.answer()
+    await cb.message.edit_text(f"📝 Месяц {m} — название аромата:"); await state.set_state(Fb.aroma)
+
+@router.message(Fb.aroma)
+async def fba(msg: Message, state: FSMContext):
+    await state.update_data(fa=msg.text.strip())
+    await msg.answer(f"⭐ <b>Общее впечатление</b> от «{msg.text.strip()}»:",
+        reply_markup=K([("😍 5","fo5"),("👍 4","fo4"),("😐 3","fo3"),("👎 2","fo2"),("🤢 1","fo1")],5))
+    await state.set_state(Fb.overall)
+
+@router.callback_query(Fb.overall, F.data.startswith("fo"))
+async def fbo(cb: CallbackQuery, state: FSMContext):
+    r = int(cb.data[2:]); await state.update_data(fo=r); await cb.answer()
+    await cb.message.edit_text("⏱ <b>Стойкость</b> (как долго держится?):",
+        reply_markup=K([("🔥 5","fl5"),("4","fl4"),("3","fl3"),("2","fl2"),("💨 1","fl1")],5))
+    await state.set_state(Fb.longevity)
+
+@router.callback_query(Fb.longevity, F.data.startswith("fl"))
+async def fbl(cb: CallbackQuery, state: FSMContext):
+    r = int(cb.data[2:]); await state.update_data(fl=r); await cb.answer()
+    await cb.message.edit_text("💨 <b>Шлейф</b> (чувствуют ли окружающие?):",
+        reply_markup=K([("🔥 5","fs5"),("4","fs4"),("3","fs3"),("2","fs2"),("💨 1","fs1")],5))
+    await state.set_state(Fb.sillage)
+
+@router.callback_query(Fb.sillage, F.data.startswith("fs"))
+async def fbs_(cb: CallbackQuery, state: FSMContext):
+    r = int(cb.data[2:]); await state.update_data(fs=r); await cb.answer()
+    await cb.message.edit_text("💬 Комментарий?",reply_markup=K([("⏭ Пропустить","fcs")]))
+    await state.set_state(Fb.comment)
+
+@router.callback_query(Fb.comment, F.data == "fcs")
+async def fcs(cb: CallbackQuery, state: FSMContext):
+    await state.update_data(fc="—"); await cb.answer(); await _fbs(cb.message, state, cb.from_user.id)
+@router.message(Fb.comment)
+async def fct(msg: Message, state: FSMContext):
+    await state.update_data(fc=msg.text.strip()); await _fbs(msg, state, msg.from_user.id)
+
+async def _fbs(msg, state, uid):
+    d = await state.get_data()
+    savfb(uid, d["fm"], d["fa"], d["fo"], d["fl"], d["fs"], d["fc"])
+    await msg.answer(
+        f"✅ <b>Оценка сохранена!</b>\n\n"
+        f"🧴 {d['fa']}\n"
+        f"⭐ Общее: {'⭐'*d['fo']} · ⏱ Стойкость: {d['fl']}/5 · 💨 Шлейф: {d['fs']}/5\n"
+        f"{('💬 '+d['fc']) if d['fc']!='—' else ''}\n\nЕщё один аромат?",
+        reply_markup=K([("🧴 Да","fb_more"),("✅ Всё","fb_done"),("🏠 Меню","menu")]))
+    await state.set_state(Fb.more)
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID,f"⭐ @{msg.chat.username if hasattr(msg.chat,'username') else '?'} ({uid}): {d['fa']} — {'⭐'*d['fo']} ⏱{d['fl']} 💨{d['fs']}\n{d['fc']}")
+        except: pass
+
+@router.callback_query(Fb.more, F.data == "fb_more")
+async def fbmore(cb: CallbackQuery, state: FSMContext):
+    d = await state.get_data(); await cb.answer()
+    await cb.message.edit_text(f"📝 Месяц {d['fm']} — аромат:"); await state.set_state(Fb.aroma)
+@router.callback_query(Fb.more, F.data == "fb_done")
+async def fbdone(cb: CallbackQuery, state: FSMContext):
+    await cb.answer(); await state.clear()
+    await cb.message.edit_text("🙏 Спасибо! Учтём 🖤\n\n📊 Посмотрите вашу карту вкуса!",
+        reply_markup=K([("📊 Карта вкуса","taste_map"),("🏠 Меню","menu")]))
+
+# ═══════════════════════════════════════
+#           MY SUBSCRIPTION
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "mysub")
+async def mysub(cb: CallbackQuery):
+    await cb.answer(); u = getu(cb.from_user.id)
+    if not u or not u.get("box_type"):
+        await cb.message.answer("Нет подписки.",reply_markup=K([("🌸 Оформить","sq"),("🏠 Меню","menu")])); return
+    bx = BOXES.get(u["box_type"], {})
+    st = {"new":"⏳ Ожидает","pending":"📝 Заявка","paid":"✅ Активна","paused":"⏸ Пауза"}.get(u.get("status",""),"?")
+    await cb.message.answer(
+        f"📋 <b>Подписка</b>\n\n{bx.get('em','')} {bx.get('name','?')}\n⏳ {u.get('duration_months','?')} мес · {u.get('monthly_price',0):,}₽/мес\n"
+        f"📊 {st}\n📦 Получено: {u.get('months_received',0)} боксов\n📅 След: {u.get('next_delivery','—')}",
+        reply_markup=K([("⭐ Оценить","fbs"),("🏠 Меню","menu")]))
+
+# ═══════════════════════════════════════
+#           CHAT SYSTEM
+# ═══════════════════════════════════════
+@router.callback_query(F.data == "cmsg")
+async def cmsg(cb: CallbackQuery): await cb.answer(); await cb.message.answer("💬 Напишите — ответим!")
+
+@router.callback_query(F.data.startswith("ac_"))
+async def acstart(cb: CallbackQuery, state: FSMContext):
+    if cb.from_user.username != ADMIN_USERNAME: await cb.answer("⛔"); return
+    uid = int(cb.data[3:]); achat_with[cb.chat.id] = uid; await cb.answer()
+    await cb.message.answer(f"💬 Чат с <code>{uid}</code>. /endchat"); await state.set_state(AChat.chatting)
+
+@router.message(Command("chat"))
+async def cchat(msg: Message, state: FSMContext):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    p = msg.text.split()
+    if len(p)<2: await msg.answer("/chat <code>ID</code>"); return
+    achat_with[msg.chat.id] = int(p[1])
+    await msg.answer(f"💬 → <code>{p[1]}</code>. /endchat"); await state.set_state(AChat.chatting)
+
+@router.message(Command("endchat"))
+async def echat(msg: Message, state: FSMContext):
+    achat_with.pop(msg.chat.id, None); await state.clear(); await msg.answer("✅")
+
+@router.message(AChat.chatting)
+async def asend(msg: Message, state: FSMContext):
+    uid = achat_with.get(msg.chat.id)
+    if not uid: await state.clear(); return
+    try:
+        await bot.send_message(uid, f"💬 <b>DAR Perfum:</b>\n\n{msg.text}", reply_markup=K([("💬 Ответить","cmsg"),("🏠 Меню","menu")]))
+        savmsg(uid, "admin→client", msg.text); await msg.answer(f"✅ → {uid}")
+    except Exception as ex: await msg.answer(f"❌ {ex}")
+
+# ═══════════════════════════════════════
+#           ADDRESS CONFIRM
+# ═══════════════════════════════════════
+@router.callback_query(F.data.startswith("addr_same_"))
+async def addr_same(cb: CallbackQuery):
+    await cb.answer("✅"); await cb.message.edit_text("✅ Адрес подтверждён! Бокс скоро отправим 🖤")
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        u = getu(int(cb.data.replace("addr_same_","")))
+        try: await bot.send_message(ADMIN_CHAT_ID, f"✅ @{u.get('username','?')} адрес ОК: {u.get('city','?')}, {u.get('address','?')}")
+        except: pass
+
+@router.callback_query(F.data.startswith("addr_new_"))
+async def addr_new(cb: CallbackQuery, state: FSMContext):
+    uid = int(cb.data.replace("addr_new_","")); await cb.answer()
+    await cb.message.edit_text("🏠 <b>Новый адрес:</b>\n\nГород, улица, дом, кв:")
+    await state.update_data(confirm_uid=uid); await state.set_state(AddrConfirm.address)
+
+@router.message(AddrConfirm.address)
+async def new_addr(msg: Message, state: FSMContext):
+    d = await state.get_data(); uid = d.get("confirm_uid", msg.from_user.id)
+    savu(uid, {"address": msg.text.strip()})
+    await msg.answer("✅ Адрес обновлён! 🖤",reply_markup=K([("🏠 Меню","menu")])); await state.clear()
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID, f"📍 {uid} новый адрес: {msg.text.strip()}")
+        except: pass
+
+# ═══════════════════════════════════════
+#           BACK BUTTONS
+# ═══════════════════════════════════════
+@router.callback_query(F.data.startswith("bk"))
+async def goback(cb: CallbackQuery, state: FSMContext):
+    n = cb.data[2:]; await cb.answer("←")
+    backs = {
+        "0": (Q.gender, hdr(1,"Для кого?","👤"), [("🙋‍♂️ М","g_m"),("🙋‍♀️ Ж","g_f"),("🎁 Подарок","g_gift")]),
+        "1": (Q.gender, hdr(1,"Для кого?","👤"), [("🙋‍♂️ М","g_m"),("🙋‍♀️ Ж","g_f"),("🎁 Подарок","g_gift")]),
+        "2": (Q.age, hdr(2,"Возраст","📅"), [("18-24","a1"),("25-34","a2"),("35-44","a3"),("45+","a4"),("← Назад","bk1")]),
+        "3": (Q.lifestyle, hdr(3,"Образ жизни","🏃"), [("💼 Деловой","l1"),("🎨 Творческий","l2"),("🏋️ Активный","l3"),("🌙 Размеренный","l4"),("← Назад","bk2")]),
+        "4": (Q.occasions, hdr(4,"Где носите?","🎭"), [("📆 Каждый день","o1"),("🌃 На выход","o2"),("🏢 Работа","o3"),("🔀 По-разному","o4"),("← Назад","bk3")]),
+        "5": (Q.intensity, hdr(5,"Интенсивность","💨"), [("🌬 Шёпот","i1"),("☁️ Умеренный","i2"),("🔥 Мощный","i3"),("🎲 Разный","i4"),("← Назад","bk4")]),
+        "9": (Q.current_perfumes, hdr(9,"Ваши ароматы","👃")+"\n\n<i>Напишите</i>", None),
+        "10": (Q.season_pref, hdr(10,"Сезон","🌤"), [("🌸","s1"),("☀️","s2"),("🍂","s3"),("❄️","s4"),("🔄","s5"),("← Назад","bk9")]),
+        "11": (Q.time_of_day, hdr(11,"Время","🕐"), [("🌅 День","t1"),("🌙 Вечер","t2"),("🔄 Универс","t3"),("← Назад","bk10")]),
+        "12": (Q.mood, hdr(12,"Настроение","🎭"), [("❤️","m1"),("💪","m2"),("🧘","m3"),("⚡","m4"),("🔮","m5"),("😏","m6"),("← Назад","bk11")]),
+        "13": (Q.associations, hdr(13,"Ассоциации","🌍"), [("🌲","z1"),("🌊","z2"),("🏙","z3"),("🕌","z4"),("🍰","z5"),("🏔","z6"),("📚","z7"),("🌾","z8"),("🏖","z9"),("🪵","z10"),("☕","z11"),("🌃","z12"),("←","bk12")]),
+        "14": (Q.longevity, hdr(14,"Стойкость","⏱"), [("🕐 2-4ч","r1"),("🕕 6-8ч","r2"),("🕛 12+ч","r3"),("← Назад","bk13")]),
+        "15": (Q.discovery, hdr(15,"Эксперименты","🚀"), [("🚀 Да","x1"),("😌 Нет","x2"),("⚖️ 50/50","x3"),("← Назад","bk14")]),
+        "16": (Q.budget, hdr(16,"Сегмент","💎"), [("🛒","b1"),("⭐","b2"),("💫","b3"),("👑","b4"),("🎲","b5"),("←","bk15")]),
+        "17": (Q.wardrobe, hdr(17,"Гардероб","👔"), [("👕","w1"),("👔","w2"),("🧢","w3"),("👗","w4"),("🎨","w5"),("←","bk16")]),
+        "18": (Q.allergies, hdr(18,"Аллергии","⚠️"), [("✅ Нет","al0"),("← Назад","bk17")]),
+        "19": (Q.goal, hdr(19,"Цель","🎯"), [("🔍","g1"),("🌍","g2"),("📚","g3"),("🎁","g4"),("←","bk18")]),
+        "20": (Q.extra_wishes, hdr(20,"Пожелания","💬"), [("⏭ Пропустить","ew0"),("← Назад","bk19")]),
     }
-    optionsHTML += `</div>`;
-  } else if (q.type === 'text') {
-    // Free text input
-    optionsHTML = `<textarea class="q-text-input" id="q-text-area" placeholder="${q.placeholder}" oninput="onTextInput()"></textarea>`;
-  } else {
-    // Standard single/multi select
-    const isMulti = q.type === 'multi';
-    optionsHTML = `<div class="q-options">${q.opts.map((opt, i) => `
-      <div class="q-option" onclick="selectQOption(this, ${i}, ${isMulti})">
-        <div class="q-option-check"></div>
-        ${opt}
-      </div>`).join('')}</div>`;
-  }
-  
-  const hintHTML = q.hint ? `<div class="q-hint">${q.hint}</div>` : '';
-  
-  content.innerHTML = `
-    <div class="q-question">${q.q}</div>
-    ${hintHTML}
-    ${optionsHTML}
-    <div class="q-counter" id="q-chip-counter"></div>
-    <button class="q-next" onclick="nextQuestion()" id="q-next-btn">Далее →</button>
-  `;
-  
-  // Auto-ready for text inputs if they already have content
-  if (q.type === 'text') {
-    updateNextBtn(false);
-  }
-}
+    if n == "box": await _box(cb.message, state); return
+    if n == "dur":
+        d = await state.get_data(); bk = d.get("box_type", "8x3")
+        await _box(cb.message, state); return
+    if n in backs:
+        st, txt, btns = backs[n]
+        await state.set_state(st)
+        if btns: await cb.message.edit_text(txt, reply_markup=K(btns, 2 if len(btns)>5 else 1))
+        else: await cb.message.edit_text(txt)
 
-let selectedQOptions = [];
-let selectedChips = [];
+# ═══════════════════════════════════════
+#           ADMIN PANEL
+# ═══════════════════════════════════════
+@router.message(Command("admin"))
+async def cadmin(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: await msg.answer("⛔"); return
+    global ADMIN_CHAT_ID; ADMIN_CHAT_ID = msg.chat.id
+    s = get_subs(); paid = [x for x in s if x.get("status")=="paid"]
+    await msg.answer(
+        f"🔐 <b>Админ DARBOX v4</b>\n\n📊 Заявок: {len(s)} · 💳 Оплат: {len(paid)}\n🔔 Уведомления: ВКЛ\n\n"
+        f"/subs · /profile ID · /reviews ID\n/chat ID · /endchat\n/broadcast · /remind · /due")
 
-function selectQOption(el, idx, multi) {
-  if (multi) {
-    el.classList.toggle('selected');
-    if (el.classList.contains('selected')) {
-      selectedQOptions.push(idx);
-    } else {
-      selectedQOptions = selectedQOptions.filter(i => i !== idx);
-    }
-  } else {
-    document.querySelectorAll('.q-option').forEach(o => o.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedQOptions = [idx];
-  }
-  updateNextBtn(selectedQOptions.length > 0);
-}
+@router.message(Command("subs"))
+async def csubs(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    s = get_subs()
+    if not s: await msg.answer("Пусто."); return
+    lines = [f"• @{x['username'] or '?'} — {BOXES.get(x['box_type'],{}).get('short','?')} {x['duration_months']}мес ({x['status']}) {('💳'+x.get('paid_at','')[:10]) if x.get('paid_at') else ''}" for x in s[:30]]
+    await msg.answer(f"📋 ({len(s)}):\n\n"+"\n".join(lines))
 
-function toggleChip(el) {
-  el.classList.toggle('selected');
-  selectedChips = [...document.querySelectorAll('.q-chip.selected')].map(c => c.textContent.trim());
-  const counter = document.getElementById('q-chip-counter');
-  if (counter) {
-    counter.innerHTML = selectedChips.length > 0 
-      ? `Выбрано: <b>${selectedChips.length}</b>` 
-      : '';
-  }
-  updateNextBtn(selectedChips.length > 0);
-}
+@router.message(Command("due"))
+async def cdue(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    d = get_due(7)
+    if not d: await msg.answer("Нет отправок."); return
+    lines = [f"• @{x['username'] or '?'} · {x.get('city','?')} · {x.get('address','?')}\n  📅 {x.get('next_delivery','?')}" for x in d]
+    await msg.answer(f"📦 <b>Отправки ({len(d)}):</b>\n\n"+"\n\n".join(lines))
 
-function onTextInput() {
-  const textarea = document.getElementById('q-text-area');
-  const hasText = textarea && textarea.value.trim().length > 0;
-  updateNextBtn(hasText);
-}
+@router.message(Command("remind"))
+async def cremind(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    d = get_due(3); sent = 0
+    for u in d:
+        try:
+            await bot.send_message(u["user_id"],
+                f"📦 <b>DARBOX скоро!</b>\n\nАдрес: {u.get('city','?')}, {u.get('address','?')}\n\nВерно?",
+                reply_markup=K([(f"✅ Да","addr_same_{u['user_id']}"),(f"📍 Изменить","addr_new_{u['user_id']}")],1))
+            sent += 1
+        except: pass
+        await asyncio.sleep(0.1)
+    await msg.answer(f"✅ {sent}/{len(d)}")
 
-function updateNextBtn(ready) {
-  const btn = document.getElementById('q-next-btn');
-  if (btn) btn.classList.toggle('ready', ready);
-}
+@router.message(Command("profile"))
+async def cprofile(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    p = msg.text.split()
+    if len(p)<2: await msg.answer("/profile <code>ID</code>"); return
+    u = getu(int(p[1]))
+    if not u: await msg.answer("?"); return
+    stats = get_taste_stats(int(p[1]))
+    await msg.answer(
+        f"👤 @{u.get('username','?')} | {u.get('full_name','?')} | 📊 {u.get('status','?')}\n"
+        f"💳 {u.get('paid_at','—')[:10] if u.get('paid_at') else '—'} | 📅 {u.get('next_delivery','—')}\n\n"
+        f"{u.get('gender','?')} {u.get('age','?')} | {u.get('lifestyle','?')} | {u.get('experience','?')}\n"
+        f"❤️ {u.get('fav_notes','?')}\n🚫 {u.get('disliked_notes','?')}\n👃 {u.get('current_perfumes','?')}\n"
+        f"🎭 {u.get('mood','?')} | 🌍 {u.get('associations','?')} | ⏱ {u.get('longevity','?')}\n"
+        f"💎 {u.get('budget','?')} | 👔 {u.get('wardrobe','?')} | 🎯 {u.get('goal','?')}\n"
+        f"⚠️ {u.get('allergies','?')}\n💬 {u.get('extra_wishes','?')}\n\n"
+        f"📊 Оценок: {stats['total'] if stats else 0}" + (f" | Средн: {stats['avg_overall']}/5" if stats else ""))
 
-function nextQuestion() {
-  const q = questions[qStep];
-  
-  if (q.type === 'chips') {
-    if (selectedChips.length === 0) return;
-    qAnswers.push({ type: 'chips', values: [...selectedChips] });
-  } else if (q.type === 'text') {
-    const textarea = document.getElementById('q-text-area');
-    const text = textarea ? textarea.value.trim() : '';
-    if (!text) {
-      // Allow skipping text with confirmation
-      qAnswers.push({ type: 'text', value: '' });
-    } else {
-      qAnswers.push({ type: 'text', value: text });
-    }
-  } else {
-    if (selectedQOptions.length === 0) return;
-    qAnswers.push({ type: q.type, values: [...selectedQOptions] });
-  }
-  
-  selectedQOptions = [];
-  selectedChips = [];
-  qStep++;
-  renderQuestion();
-  // Scroll to top of question
-  document.getElementById('q-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+@router.callback_query(F.data.startswith("apr_"))
+async def aqp(cb: CallbackQuery):
+    if cb.from_user.username != ADMIN_USERNAME: await cb.answer("⛔"); return
+    uid = int(cb.data[4:]); u = getu(uid); await cb.answer()
+    if u: await cb.message.answer(f"👤 @{u.get('username','?')}\n❤️ {u.get('fav_notes','?')}\n🚫 {u.get('disliked_notes','?')}\n🎭 {u.get('mood','?')} 🌍 {u.get('associations','?')}")
 
-// === CHAT ===
-function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  
-  const msgs = document.getElementById('chat-messages');
-  const now = new Date();
-  const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  
-  msgs.innerHTML += `<div class="chat-msg user">${text}<div class="chat-msg-time">${time}</div></div>`;
-  input.value = '';
-  msgs.scrollTop = msgs.scrollHeight;
-  
-  // Simulate reply
-  setTimeout(() => {
-    msgs.innerHTML += `<div class="chat-msg admin">Спасибо за сообщение! Парфюмер ответит в ближайшее время 💐<div class="chat-msg-time">${time}</div></div>`;
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 1200);
-}
+@router.message(Command("reviews"))
+async def crev(msg: Message):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    p = msg.text.split()
+    if len(p)<2: await msg.answer("/reviews <code>ID</code>"); return
+    fs = getfb(int(p[1]))
+    if not fs: await msg.answer("Нет."); return
+    lines = [f"М{f['month_num']} | {f['aroma_name']} {'⭐'*f['rating_overall']} ⏱{f.get('rating_longevity','—')} 💨{f.get('rating_sillage','—')}\n   {f['comment']}" for f in fs]
+    await msg.answer("💬 Отзывы:\n\n"+"\n\n".join(lines))
 
-document.getElementById('chat-input')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') sendChat();
-});
+@router.message(Command("broadcast"))
+async def cbcast(msg: Message, state: FSMContext):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    await msg.answer("📢 Текст:"); await state.set_state(Bcast.text)
 
-// === COPY REFERRAL ===
-function copyRef(btn) {
-  const link = 't.me/dararomabox_bot?start=ref_anna2026';
-  navigator.clipboard?.writeText(link).then(() => {
-    btn.textContent = '✓';
-    setTimeout(() => btn.textContent = 'Копировать', 2000);
-  });
-}
+@router.message(Bcast.text)
+async def dobcast(msg: Message, state: FSMContext):
+    if msg.from_user.username != ADMIN_USERNAME: return
+    s = get_subs(); sent = 0
+    for x in s:
+        try: await bot.send_message(x["user_id"], msg.text); sent += 1
+        except: pass
+        await asyncio.sleep(0.1)
+    await msg.answer(f"✅ {sent}/{len(s)}"); await state.clear()
 
-// === INIT ===
-document.addEventListener('DOMContentLoaded', () => {
-  // Stagger menu cards
-  document.querySelectorAll('.menu-card').forEach((card, i) => {
-    card.style.animation = `fadeUp 0.5s ${0.1 + i * 0.06}s cubic-bezier(0.22,1,0.36,1) both`;
-  });
-});
-</script>
+# ═══════════════════════════════════════
+#           CLIENT → ADMIN
+# ═══════════════════════════════════════
+@router.message(F.text)
+async def c2a(msg: Message, state: FSMContext):
+    if msg.from_user.username == ADMIN_USERNAME: return
+    cs = await state.get_state()
+    if cs and any(cs.startswith(p) for p in ["Q:","Fb:","Diary:","AddrConfirm:","Bcast:"]): return
+    savmsg(msg.from_user.id, "client→admin", msg.text)
+    global ADMIN_CHAT_ID
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID,
+            f"💬 @{msg.from_user.username or '?'} (<code>{msg.from_user.id}</code>):\n{msg.text}",
+            reply_markup=K([(f"💬","ac_{msg.from_user.id}"),(f"👤","apr_{msg.from_user.id}")]))
+        except: pass
+    await msg.answer("✅ Отправлено! 🖤", reply_markup=K([("🏠 Меню","menu")]))
 
-</body>
-</html>
+# ═══════════════════════════════════════
+#           LAUNCH
+# ═══════════════════════════════════════
+async def main():
+    init_db(); print("🚀 DARBOX v4 Premium!")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
